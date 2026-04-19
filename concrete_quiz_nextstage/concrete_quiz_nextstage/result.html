@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>結果 | コンクリート技士 試験対策ゲーム</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#2f6fb2" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+</head>
+<body data-page="result">
+  <div class="app-shell">
+    <header class="page-header compact-header">
+      <div class="header-inner">
+        <p class="eyebrow">結果確認・復習</p>
+        <h1>演習結果</h1>
+      </div>
+    </header>
+
+    <main class="page-main">
+      <section id="resultSummaryCard" class="card">
+        <h2 class="section-title">今回の結果</h2>
+
+        <div class="result-summary-grid">
+          <div class="dashboard-card large">
+            <span class="dashboard-label">正解数</span>
+            <strong id="resultCorrectCount">-</strong>
+          </div>
+          <div class="dashboard-card large">
+            <span class="dashboard-label">出題数</span>
+            <strong id="resultTotalCount">-</strong>
+          </div>
+          <div class="dashboard-card large">
+            <span class="dashboard-label">正答率</span>
+            <strong id="resultAccuracy">-</strong>
+          </div>
+          <div class="dashboard-card large">
+            <span class="dashboard-label">出題モード</span>
+            <strong id="resultMode">-</strong>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <h3>苦手分野</h3>
+          <p id="weaknessSummary" class="text-block">集計中です。</p>
+        </div>
+
+        <div class="action-row action-row-spread">
+          <button id="retrySameSettingsButton" class="button button-primary" type="button">同じ条件でもう一度挑戦</button>
+          <a href="index.html" class="button button-secondary">タイトルへ戻る</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">今回間違えた問題</h2>
+        <div id="wrongListArea" class="review-list">
+          <p class="empty-message">読み込み中です。</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">学習メモ</h2>
+        <p class="text-block">
+          間違えた問題は localStorage に蓄積されるため、次回は「間違えた問題だけ」モードで復習できます。
+        </p>
+        <p class="text-block">
+          また、分野別の正答率も保存されるため、「苦手分野優先」モードで弱点補強に使えます。
+        </p>
+      </section>
+
+      <section id="resultFallback" class="card is-hidden">
+        <h2 class="section-title">結果データが見つかりません</h2>
+        <p class="text-block">先に問題演習を開始してください。</p>
+        <div class="action-row">
+          <a href="index.html" class="button button-primary">タイトルへ戻る</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+  <script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {})); }</script>
+</body>
+</html>
