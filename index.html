@@ -9,6 +9,31 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<style>
+body.theme-dark {
+  background: #0f131a !important;
+  color: #eef3f8 !important;
+}
+body.theme-dark .card {
+  background: #171c24 !important;
+  color: #eef3f8 !important;
+}
+body.theme-dark select,
+body.theme-dark .info-box,
+body.theme-dark .dashboard-card,
+body.theme-dark .question-stem,
+body.theme-dark .explanation-box,
+body.theme-dark .tag-chip,
+body.theme-dark .badge,
+body.theme-dark .badge-muted,
+body.theme-dark .option-button,
+body.theme-dark .review-card,
+body.theme-dark .review-option {
+  background: #202733 !important;
+  color: #eef3f8 !important;
+  border-color: #2a3442 !important;
+}
+</style>
 </head>
 <body data-page="index">
   <div class="app-shell">
@@ -148,6 +173,30 @@
 
   <script src="questions.js"></script>
   <script src="app.js?v=20260420-1"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const themeSelect = document.getElementById("themeSelect");
+  if (!themeSelect) return;
+
+  const savedTheme = localStorage.getItem("concreteQuizTheme") || "light";
+  themeSelect.value = savedTheme;
+
+  if (savedTheme === "dark") {
+    document.body.classList.add("theme-dark");
+  }
+
+  themeSelect.addEventListener("change", function () {
+    const selectedTheme = themeSelect.value;
+    localStorage.setItem("concreteQuizTheme", selectedTheme);
+
+    if (selectedTheme === "dark") {
+      document.body.classList.add("theme-dark");
+    } else {
+      document.body.classList.remove("theme-dark");
+    }
+  });
+});
+</script>
 
 </body>
 </html>
