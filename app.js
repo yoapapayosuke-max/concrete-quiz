@@ -28,19 +28,35 @@
 
   function shuffleArray(array) {
     const copy = array.slice();
-    for (let i = copy.length - 1; i > 0; i -= 1) {
+    for (let i = copy.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
+      const tmp = copy[i];
+      copy[i] = copy[j];
+      copy[j] = tmp;
     }
     return copy;
   }
 
-  function normalizeQuestions() {
-    if (!Array.isArray(window.questions)) {
-      return [];
-    }
+  function getQuestionSource() {
+    try {
+      if (typeof questions !== 'undefined' && Array.isArray(questions)) {
+        return questions;
+      }
+    } catch (e) {}
 
-    return window.questions
+    try {
+      if (typeof window !== 'undefined' && Array.isArray(window.questions)) {
+        return window.questions;
+      }
+    } catch (e) {}
+
+    return [];
+  }
+
+  function normalizeQuestions() {
+    const source = getQuestionSource();
+
+    return source
       .map(function (q, index) {
         if (!q || typeof q !== 'object') return null;
 
@@ -192,7 +208,7 @@
       const session = buildSession(settings);
 
       if (!session.questions.length) {
-        alert('該当する問題がありません。questions.js を確認してください。');
+        alert('問題データを読み込めませんでした。questions.js の形式を確認してください。');
         return;
       }
 
@@ -233,6 +249,11 @@
     const explanationBox = document.getElementById('explanationBox');
     const nextButton = document.getElementById('nextButton');
 
+    if (!optionsArea || !questionText || !nextButton) {
+      console.error('quiz.html のIDが app.js と一致していません');
+      return;
+    }
+
     let answered = false;
 
     function renderQuestion() {
@@ -251,7 +272,7 @@
       if (progressText) progressText.textContent = number + ' / ' + total;
       if (progressFill) progressFill.style.width = ((number / total) * 100) + '%';
       if (questionNumber) questionNumber.textContent = '第' + number + '問';
-      if (questionText) questionText.textContent = current.question;
+      questionText.textContent = current.question;
 
       if (feedbackArea) feedbackArea.classList.add('hidden');
       if (answerStatus) {
@@ -259,7 +280,7 @@
         answerStatus.textContent = '';
       }
       if (explanationBox) explanationBox.innerHTML = '';
-      if (nextButton) nextButton.classList.add('hidden');
+      nextButton.classList.add('hidden');
 
       optionsArea.innerHTML = '';
 
@@ -319,8 +340,12 @@
             const correctText = current.options[current.answer] || '';
             explanationBox.innerHTML =
               '<div class="explanation-title">解説</div>' +
-              '<div class="explanation-answer">正解: ' + escapeHtml(String.fromCharCode(65 + current.answer) + '. ' + correctText) + '</div>' +
-              '<div class="explanation-body">' + escapeHtml(current.explanation || '解説は未設定です。') + '</div>';
+              '<div class="explanation-answer">正解: ' +
+              escapeHtml(String.fromCharCode(65 + current.answer) + '. ' + correctText) +
+              '</div>' +
+              '<div class="explanation-body">' +
+              escapeHtml(current.explanation || '解説は未設定です。') +
+              '</div>';
           }
 
           saveQuizSession(session);
@@ -330,36 +355,32 @@
             accuracyBadge.textContent = '正答率 ' + newAccuracy + '%';
           }
 
-          if (nextButton) {
-            nextButton.textContent = session.currentIndex >= session.questions.length - 1 ? '結果を見る' : '次へ';
-            nextButton.classList.remove('hidden');
-          }
+          nextButton.textContent = session.currentIndex >= session.questions.length - 1 ? '結果を見る' : '次へ';
+          nextButton.classList.remove('hidden');
         });
 
         optionsArea.appendChild(button);
       });
     }
 
-    if (nextButton) {
-      nextButton.addEventListener('click', function () {
-        if (session.currentIndex >= session.questions.length - 1) {
-          const result = {
-            score: session.score,
-            total: session.questions.length,
-            answers: session.answers,
-            settings: session.settings,
-            finishedAt: Date.now()
-          };
-          saveQuizResult(result);
-          location.href = 'result.html';
-          return;
-        }
+    nextButton.addEventListener('click', function () {
+      if (session.currentIndex >= session.questions.length - 1) {
+        const result = {
+          score: session.score,
+          total: session.questions.length,
+          answers: session.answers,
+          settings: session.settings,
+          finishedAt: Date.now()
+        };
+        saveQuizResult(result);
+        location.href = 'result.html';
+        return;
+      }
 
-        session.currentIndex += 1;
-        saveQuizSession(session);
-        renderQuestion();
-      });
-    }
+      session.currentIndex += 1;
+      saveQuizSession(session);
+      renderQuestion();
+    });
 
     renderQuestion();
   }
