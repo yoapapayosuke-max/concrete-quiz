@@ -786,65 +786,473 @@ body.theme-dark .review-option-label {
   color: var(--text) !important;
 }
 
-/* ===== 問題画面ダークモード 最終上書き ===== */
-body.theme-dark .quiz-status-card,
+/* =========================================================
+   最終UI調整パック
+   既存機能を壊さず、見た目だけを安定化するための末尾上書き
+   配置場所: style.css の一番最後
+========================================================= */
+
+/* ===== 共通トークン ===== */
+:root {
+  --bg: #f3f6fb;
+  --bg-soft: #eaf0f8;
+  --surface: #ffffff;
+  --surface-2: #f8fbff;
+  --text: #1f2937;
+  --text-soft: #5b6678;
+  --border: #d6deea;
+  --primary: #2f6fb2;
+  --primary-strong: #1f5d9c;
+  --accent: #e8f1fb;
+  --success: #1f8f5f;
+  --danger: #c43d3d;
+  --warning: #b7791f;
+  --shadow: 0 8px 24px rgba(18, 40, 72, 0.08);
+}
+
+body.theme-dark {
+  --bg: #0f1722;
+  --bg-soft: #131d2b;
+  --surface: #182334;
+  --surface-2: #1d2a3d;
+  --text: #eef4ff;
+  --text-soft: #b5c2d6;
+  --border: #314258;
+  --primary: #6aa8ff;
+  --primary-strong: #8dbdff;
+  --accent: #21344f;
+  --success: #53c98f;
+  --danger: #ff8a8a;
+  --warning: #ffc36a;
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+/* ===== ページ全体 ===== */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+  color: var(--text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body,
+body * {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ===== 共通コンテナ ===== */
+.container,
+.page-container,
+.main-container,
+.content-wrap,
+.app-shell,
+.quiz-shell,
+.result-shell {
+  width: min(100%, 980px);
+  margin-inline: auto;
+}
+
+main,
+section,
+.card,
+.panel,
+.quiz-card,
+.result-card,
+.settings-card,
+.summary-card {
+  color: var(--text);
+}
+
+/* ===== カード・パネル統一 ===== */
+.card,
+.panel,
+.quiz-card,
+.result-card,
+.settings-card,
+.summary-card,
+#quizArea,
+#resultArea,
+.question-box,
+.explanation-box,
+.option-review,
+.stat-box,
+.result-summary,
+.mode-summary {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--shadow);
+}
+
+/* ===== 見出し ===== */
+h1, h2, h3, h4, h5, h6,
+.page-title,
+.screen-title,
+.result-title,
+.quiz-title {
+  color: var(--text) !important;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+}
+
+h1,
+.page-title,
+.screen-title {
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  font-weight: 800;
+}
+
+h2,
+.result-title,
+.quiz-title {
+  font-size: clamp(1.2rem, 2.7vw, 1.6rem);
+  font-weight: 700;
+}
+
+/* ===== 補助文 ===== */
+p,
+li,
+small,
+.label,
+.help-text,
+.subtext,
+.muted,
+.note,
+.description {
+  color: var(--text-soft) !important;
+  line-height: 1.7;
+}
+
+/* ===== 入力系 ===== */
+input,
+select,
+textarea {
+  width: 100%;
+  color: var(--text) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 0.8rem 0.95rem;
+  outline: none;
+  box-shadow: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-soft) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* ===== ボタン統一 ===== */
+button,
+.btn,
+.button,
+.primary-button,
+.secondary-button,
+.option-button,
+.action-button,
+.link-button {
+  min-height: 48px;
+  border-radius: 14px !important;
+  border: 1px solid var(--border);
+  transition: transform 0.08s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  font-weight: 700;
+}
+
+button:hover,
+.btn:hover,
+.button:hover,
+.primary-button:hover,
+.secondary-button:hover,
+.option-button:hover,
+.action-button:hover,
+.link-button:hover {
+  transform: translateY(-1px);
+}
+
+button:active,
+.btn:active,
+.button:active,
+.primary-button:active,
+.secondary-button:active,
+.option-button:active,
+.action-button:active,
+.link-button:active {
+  transform: translateY(0);
+}
+
+.primary-button,
+.btn-primary,
+button.primary {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+}
+
+.primary-button:hover,
+.btn-primary:hover,
+button.primary:hover {
+  background: var(--primary-strong) !important;
+  border-color: var(--primary-strong) !important;
+}
+
+.secondary-button,
+.btn-secondary,
+button.secondary {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* ===== バッジ類 ===== */
+.badge,
+.tag-chip,
+.modeBadge,
+.accuracyBadge,
+.status-chip,
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ===== 問題画面最重要 ===== */
+#quizArea,
+#quizArea * {
+  color: var(--text);
+}
+
+.question-stem,
+.question-text,
+#questionText,
+#questionStem {
+  color: var(--text) !important;
+  font-size: clamp(1.05rem, 2.6vw, 1.2rem) !important;
+  line-height: 1.8 !important;
+  font-weight: 700 !important;
+}
+
+.question-meta,
+.question-number,
+.progress-text,
+.quiz-progress {
+  color: var(--text-soft) !important;
+}
+
+.options,
+.option-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.option-button {
+  width: 100%;
+  text-align: left;
+  padding: 1rem 1rem;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  line-height: 1.65;
+  font-size: 1rem;
+}
+
+.option-button:hover {
+  border-color: var(--primary) !important;
+  background: var(--surface-2) !important;
+}
+
+.option-button.selected,
+.option-button[aria-pressed="true"] {
+  border-color: var(--primary) !important;
+  background: var(--accent) !important;
+  color: var(--text) !important;
+}
+
+.option-button.correct {
+  background: color-mix(in srgb, var(--success) 15%, var(--surface)) !important;
+  border-color: var(--success) !important;
+  color: var(--text) !important;
+}
+
+.option-button.incorrect {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface)) !important;
+  border-color: var(--danger) !important;
+  color: var(--text) !important;
+}
+
+.explanation-box,
+.explanation,
+#explanationBox {
+  margin-top: 1rem;
+  padding: 1rem 1rem;
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  line-height: 1.8;
+}
+
+.explanation-box strong,
+.explanation-box b,
+.explanation strong,
+.explanation b {
+  color: var(--text) !important;
+}
+
+/* ===== 結果画面 ===== */
+#resultArea,
+#resultArea * {
+  color: var(--text);
+}
+
+.score-value,
+.result-score,
+.accuracy-value,
+.stat-value {
+  color: var(--primary) !important;
+  font-weight: 800;
+}
+
+.stat-label,
+.score-label,
+.result-meta {
+  color: var(--text-soft) !important;
+}
+
+.review-item,
+.answer-review-item,
+.result-question-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  padding: 1rem;
+}
+
+/* ===== トップ画面 ===== */
+.hero,
+.hero-card,
+.start-panel,
+.top-panel,
+.title-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 22px !important;
+  box-shadow: var(--shadow);
+}
+
+.hero p,
+.top-panel p,
+.start-panel p {
+  color: var(--text-soft) !important;
+}
+
+/* ===== リンク ===== */
+a {
+  color: var(--primary);
+}
+
+a:hover {
+  opacity: 0.9;
+}
+
+/* ===== スマホ最適化 ===== */
+@media (max-width: 768px) {
+  body {
+    padding-inline: 12px;
+  }
+
+  .container,
+  .page-container,
+  .main-container,
+  .content-wrap,
+  .app-shell,
+  .quiz-shell,
+  .result-shell {
+    width: 100%;
+  }
+
+  .card,
+  .panel,
+  .quiz-card,
+  .result-card,
+  .settings-card,
+  .summary-card,
+  #quizArea,
+  #resultArea,
+  .question-box,
+  .explanation-box,
+  .option-review,
+  .stat-box,
+  .result-summary,
+  .mode-summary {
+    border-radius: 16px !important;
+  }
+
+  .option-button,
+  button,
+  .btn,
+  .button,
+  .primary-button,
+  .secondary-button {
+    min-height: 52px;
+    font-size: 0.98rem;
+  }
+
+  .question-stem,
+  .question-text,
+  #questionText,
+  #questionStem {
+    font-size: 1.05rem !important;
+    line-height: 1.75 !important;
+  }
+}
+
+/* ===== さらに強制保護（ダークで白背景白文字事故を防ぐ） ===== */
 body.theme-dark #quizArea,
-body.theme-dark #quizFallback,
+body.theme-dark #quizArea *,
+body.theme-dark #resultArea,
+body.theme-dark #resultArea *,
 body.theme-dark .question-stem,
-body.theme-dark #questionStem,
-body.theme-dark .options-list,
+body.theme-dark .question-text,
 body.theme-dark .option-button,
 body.theme-dark .explanation-box,
-body.theme-dark #feedbackResult,
-body.theme-dark .tag-chip,
 body.theme-dark .badge,
-body.theme-dark .badge-muted {
-  color: #eef3f8 !important;
+body.theme-dark .tag-chip,
+body.theme-dark .review-item,
+body.theme-dark .result-question-card {
+  color: var(--text) !important;
 }
 
-body.theme-dark .question-stem,
-body.theme-dark #questionStem,
-body.theme-dark .question-stem *,
-body.theme-dark #questionStem *,
 body.theme-dark .option-button,
-body.theme-dark .option-button *,
 body.theme-dark .explanation-box,
-body.theme-dark .explanation-box *,
-body.theme-dark .tag-chip,
-body.theme-dark .badge,
-body.theme-dark .badge-muted {
-  color: #eef3f8 !important;
-  border-color: #2a3442 !important;
-}
-
-body.theme-dark .question-stem,
-body.theme-dark #questionStem {
-  background: #202733 !important;
-}
-
-body.theme-dark .option-button {
-  background: #171c24 !important;
-}
-
-body.theme-dark .option-button:hover {
-  background: #202733 !important;
-  border-color: #6aa8ff !important;
-}
-
-body.theme-dark .explanation-box {
-  background: #202733 !important;
-}
-
-body.theme-dark .badge,
-body.theme-dark .badge-muted,
-body.theme-dark .tag-chip {
-  background: #202733 !important;
-}
-
-body.theme-dark .question-table,
-body.theme-dark .question-table th,
-body.theme-dark .question-table td {
-  background: #171c24 !important;
-  color: #eef3f8 !important;
-  border-color: #2a3442 !important;
+body.theme-dark .review-item,
+body.theme-dark .result-question-card,
+body.theme-dark #quizArea,
+body.theme-dark #resultArea {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
 }
