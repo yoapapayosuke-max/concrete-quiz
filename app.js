@@ -95,7 +95,16 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
   }
+  function applyTheme(theme) {
+    const body = document.body;
+    if (!body) return;
 
+    body.classList.remove("theme-dark");
+
+    if (theme === "dark") {
+      body.classList.add("theme-dark");
+    }
+  }
   function getLearningHistory() {
     const history = getStorage(STORAGE_KEYS.LEARNING_HISTORY, null);
 
@@ -479,7 +488,7 @@
     if (fallback) fallback.classList.remove("is-hidden");
   }
 
-  function initIndexPage() {
+   function initIndexPage() {
     const form = document.getElementById("settingsForm");
     if (!form) return;
 
@@ -487,6 +496,7 @@
     const categorySelect = document.getElementById("categorySelect");
     const modeSelect = document.getElementById("modeSelect");
     const countSelect = document.getElementById("countSelect");
+    const themeSelect = document.getElementById("themeSelect");
     const formMessage = document.getElementById("formMessage");
     const continueButton = document.getElementById("continueButton");
     const installAppButton = document.getElementById("installAppButton");
@@ -496,14 +506,36 @@
       year: "all",
       category: "all",
       mode: "normal",
-      count: "10"
+      count: "10",
+      theme: "light"
     });
 
     if (yearSelect) yearSelect.value = savedSettings.year || "all";
     if (categorySelect) categorySelect.value = savedSettings.category || "all";
     if (modeSelect) modeSelect.value = savedSettings.mode || "normal";
     if (countSelect) countSelect.value = String(savedSettings.count || "10");
+    if (themeSelect) themeSelect.value = savedSettings.theme || "light";
 
+    applyTheme(savedSettings.theme || "light");
+
+    function saveSettingsFromForm() {
+      const liveSettings = {
+        year: yearSelect ? yearSelect.value : "all",
+        category: categorySelect ? categorySelect.value : "all",
+        mode: modeSelect ? modeSelect.value : "normal",
+        count: countSelect ? countSelect.value : "10",
+        theme: themeSelect ? themeSelect.value : "light"
+      };
+
+      setStorage(STORAGE_KEYS.QUIZ_SETTINGS, liveSettings);
+      applyTheme(liveSettings.theme);
+    }
+
+    [yearSelect, categorySelect, modeSelect, countSelect, themeSelect]
+      .filter(Boolean)
+      .forEach((element) => {
+        element.addEventListener("change", saveSettingsFromForm);
+      });
     const existingSession = getCurrentSession();
     if (continueButton) {
       const canContinue = Boolean(existingSession && Array.isArray(existingSession.questionIds) && existingSession.questionIds.length > 0 && Number(existingSession.currentIndex || 0) < existingSession.questionIds.length);
@@ -559,7 +591,8 @@
         year: yearSelect ? yearSelect.value : "all",
         category: categorySelect ? categorySelect.value : "all",
         mode: modeSelect ? modeSelect.value : "normal",
-        count: countSelect ? countSelect.value : "10"
+        count: countSelect ? countSelect.value : "10",
+        theme: themeSelect ? themeSelect.value : "light"
       };
 
       const history = getLearningHistory();
@@ -869,7 +902,12 @@
     }
   }
 
-  function init() {
+   function init() {
+    const savedSettings = getStorage(STORAGE_KEYS.QUIZ_SETTINGS, {
+      theme: "light"
+    });
+    applyTheme(savedSettings.theme || "light");
+
     const page = document.body?.dataset?.page;
 
     switch (page) {
