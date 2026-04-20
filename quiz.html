@@ -3,102 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>問題演習 | コンクリート技士 試験対策ゲーム</title>
-  <link rel="stylesheet" href="style.css?v=20260420-2" />
-<script src="app.js?v=20260420-2"></script>
-  <meta name="theme-color" content="#2f6fb2" />
-  
-  <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <title>問題 | コンクリート技士 試験対策ゲーム</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body data-page="quiz">
-<script>
-(function () {
-  try {
-    const settings = JSON.parse(localStorage.getItem("concreteQuizSettings") || "{}");
-    const session = JSON.parse(localStorage.getItem("concreteQuizSession") || "{}");
-    const result = JSON.parse(localStorage.getItem("concreteQuizResult") || "{}");
+<body>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+          document.body.classList.add('theme-dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
 
-    const theme =
-      (session && session.settings && session.settings.theme) ||
-      (result && result.settings && result.settings.theme) ||
-      (settings && settings.theme) ||
-      "light";
+  <main class="page-container quiz-shell">
+    <section id="quizArea" class="quiz-card">
+      <header class="quiz-header">
+        <div class="quiz-header-top">
+          <span id="modeBadge" class="badge">通常</span>
+          <span id="accuracyBadge" class="badge">正答率 --</span>
+        </div>
 
-    if (theme === "dark") {
-      document.body.classList.add("theme-dark");
-    }
-  } catch (e) {
-    // 何もしない
-  }
-})();
-</script>
-  <div class="app-shell">
-    <header class="page-header compact-header">
-      <div class="header-inner">
-        <p class="eyebrow">問題演習</p>
-        <h1>コンクリート技士 試験対策ゲーム</h1>
+        <h1 class="quiz-title">問題演習</h1>
+
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span id="progressText" class="progress-text">1 / 10</span>
+            <span id="categoryBadge" class="tag-chip">分野: --</span>
+          </div>
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="question-box">
+        <div id="questionNumber" class="question-number">第1問</div>
+        <div id="questionText" class="question-stem">ここに問題文が表示されます。</div>
+      </section>
+
+      <section id="optionsArea" class="option-list"></section>
+
+      <section id="feedbackArea" class="feedback-area hidden">
+        <div id="answerStatus" class="answer-status"></div>
+        <div id="explanationBox" class="explanation-box"></div>
+      </section>
+
+      <div class="button-row quiz-button-row">
+        <button type="button" id="nextButton" class="primary-button hidden">次へ</button>
       </div>
-    </header>
-
-    <main class="page-main">
-      <section class="card quiz-status-card">
-        <div class="quiz-topbar">
-          <div class="status-group">
-            <span class="badge" id="progressBadge">第 - 問 / - 問中</span>
-            <span class="badge" id="scoreBadge">正解数: 0</span>
-          </div>
-          <div class="status-group">
-            <span class="badge badge-muted" id="yearBadge">年度: -</span>
-            <span class="badge badge-muted" id="categoryBadge">分野: -</span>
-            <span class="badge badge-muted" id="modeBadge">モード: -</span>
-            <span class="badge badge-muted" id="accuracyBadge">現在正答率: -</span>
-          </div>
-        </div>
-
-        <div class="progressbar" aria-hidden="true">
-          <div id="progressBarFill" class="progressbar-fill"></div>
-        </div>
-      </section>
-
-      <section id="quizArea" class="card">
-        <div class="meta-row">
-          <div class="meta-tags" id="questionTags"></div>
-        </div>
-
-        <h2 class="question-number" id="questionNumber">問題 1</h2>
-        <div class="question-stem" id="questionStem">問題文を読み込み中です。</div>
-
-        <div id="optionsContainer" class="options-list" role="group" aria-label="選択肢一覧"></div>
-
-        <div id="feedbackArea" class="feedback-area is-hidden" aria-live="polite">
-          <div id="feedbackResult" class="feedback-result"></div>
-          <div class="explanation-box">
-            <h3>解説</h3>
-            <p id="explanationText"></p>
-          </div>
-        </div>
-
-        <div class="action-row action-row-spread">
-          <button id="backToTitleButton" class="button button-secondary" type="button">タイトルへ戻る</button>
-          <button id="nextButton" class="button button-primary is-hidden" type="button">次の問題へ</button>
-        </div>
-      </section>
-
-      <section id="quizFallback" class="card is-hidden">
-        <h2 class="section-title">問題を開始できませんでした</h2>
-        <p class="text-block">
-          出題条件が保存されていないか、出題対象の問題がありません。
-        </p>
-        <div class="action-row">
-          <a href="index.html" class="button button-primary">タイトルへ戻る</a>
-        </div>
-      </section>
-    </main>
-  </div>
+    </section>
+  </main>
 
   <script src="questions.js"></script>
   <script src="app.js"></script>
- 
 </body>
 </html>

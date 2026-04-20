@@ -1,935 +1,442 @@
 (function () {
-  "use strict";
+  'use strict';
 
-  const STORAGE_KEYS = {
-    QUIZ_SETTINGS: "concreteQuizSettings",
-    QUIZ_SESSION: "concreteQuizSession",
-    QUIZ_RESULT: "concreteQuizResult",
-    LEARNING_HISTORY: "concreteQuizLearningHistory"
-  };
-
-  let isAnswerLocked = false;
-
-
-  let deferredInstallPrompt = null;
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    document.dispatchEvent(new CustomEvent("appinstallready"));
-  });
-
-  window.addEventListener("appinstalled", () => {
-    deferredInstallPrompt = null;
-    document.dispatchEvent(new CustomEvent("appinstalledstate"));
-  });
-
-  const CATEGORY_LABELS = {
-    a: "材料",
-    b: "配合",
-    c: "フレッシュコンクリートの性質",
-    d: "硬化コンクリート",
-    e: "製造・品質管理",
-    f: "施工",
-    g: "特殊コンクリート",
-    h: "構造・力学・法令・その他"
-  };
-
-  const MODE_LABELS = {
-    normal: "通常",
-    random: "完全ランダム",
-    weakness: "苦手分野優先",
-    review: "間違えた問題だけ"
-  };
-
-  function getCategoryLabel(categoryKey, fallback = "") {
-    return CATEGORY_LABELS[categoryKey] || fallback || categoryKey || "-";
+  function applyTheme(theme) {
+    const safeTheme = theme === 'dark' ? 'dark' : 'light';
+    document.body.classList.toggle('theme-dark', safeTheme === 'dark');
+    try {
+      localStorage.setItem('theme', safeTheme);
+    } catch (e) {}
   }
 
-  function safeParse(json, fallback) {
+  function getSavedTheme() {
     try {
-      const parsed = JSON.parse(json);
-      return parsed ?? fallback;
-    } catch (error) {
-      return fallback;
+      return localStorage.getItem('theme') || 'light';
+    } catch (e) {
+      return 'light';
     }
   }
 
-  function getStorage(key, fallback) {
-    return safeParse(localStorage.getItem(key), fallback);
-  }
-
-  function setStorage(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
-  }
-
-  function removeStorage(key) {
-    localStorage.removeItem(key);
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function shuffleArray(array) {
-    const copied = [...array];
-    for (let i = copied.length - 1; i > 0; i -= 1) {
+    const copy = array.slice();
+    for (let i = copy.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
-      [copied[i], copied[j]] = [copied[j], copied[i]];
+      [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-    return copied;
+    return copy;
   }
 
-  function clampNumber(num, min, max) {
-    return Math.min(Math.max(num, min), max);
-  }
-
-  function formatPercent(value) {
-    if (!Number.isFinite(value)) {
-      return "0%";
-    }
-    return `${Math.round(value)}%`;
-  }
-
-  function escapeHtml(text) {
-    return String(text)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-  function applyTheme(theme) {
-    const body = document.body;
-    if (!body) return;
-
-    body.classList.remove("theme-dark");
-
-    if (theme === "dark") {
-      body.classList.add("theme-dark");
-    }
-  }
-  function getLearningHistory() {
-    const history = getStorage(STORAGE_KEYS.LEARNING_HISTORY, null);
-
-    if (history && typeof history === "object") {
-      return {
-        totalSessions: Number(history.totalSessions || 0),
-        totalAnswers: Number(history.totalAnswers || 0),
-        totalCorrect: Number(history.totalCorrect || 0),
-        categoryStats: history.categoryStats || {},
-        wrongQuestionMap: history.wrongQuestionMap || {},
-        recentResults: Array.isArray(history.recentResults) ? history.recentResults : []
-      };
+  function normalizeQuestions() {
+    if (!Array.isArray(window.questions)) {
+      return [];
     }
 
-    return {
-      totalSessions: 0,
-      totalAnswers: 0,
-      totalCorrect: 0,
-      categoryStats: {},
-      wrongQuestionMap: {},
-      recentResults: []
+    return window.questions
+      .map(function (q, index) {
+        if (!q || typeof q !== 'object') return null;
+
+        const options = Array.isArray(q.options) ? q.options.slice() : [];
+        let answerIndex = Number(q.answer);
+
+        if (!Number.isInteger(answerIndex) && typeof q.correct === 'number') {
+          answerIndex = Number(q.correct);
+        }
+
+        if (!Number.isInteger(answerIndex) && typeof q.answerIndex === 'number') {
+          answerIndex = Number(q.answerIndex);
+        }
+
+        if (!Number.isInteger(answerIndex)) {
+          answerIndex = 0;
+        }
+
+        return {
+          id: q.id || ('q' + (index + 1)),
+          category: q.category || 'all',
+          question: q.question || q.stem || '問題文が設定されていません。',
+          options: options,
+          answer: answerIndex,
+          explanation: q.explanation || ''
+        };
+      })
+      .filter(function (q) {
+        return q && q.options.length >= 2;
+      });
+  }
+
+  function categoryLabel(value) {
+    const map = {
+      all: 'すべて',
+      a: 'a 材料',
+      b: 'b 配合',
+      c: 'c フレッシュコンクリートの性質',
+      d: 'd 硬化コンクリート',
+      e: 'e 製造・品質管理',
+      f: 'f 施工',
+      g: 'g 特殊コンクリート',
+      h: 'h 構造・力学・法令・その他'
     };
+    return map[value] || value || 'すべて';
   }
 
-  function saveLearningHistory(history) {
-    setStorage(STORAGE_KEYS.LEARNING_HISTORY, history);
+  function modeLabel(value) {
+    const map = {
+      normal: '通常',
+      random: 'ランダム',
+      review: '復習向け'
+    };
+    return map[value] || value || '通常';
   }
 
-  function getAllAvailableQuestions() {
-    if (!Array.isArray(window.QUESTIONS)) {
-      return [];
-    }
+  function buildSession(settings) {
+    const all = normalizeQuestions();
 
-    return window.QUESTIONS.filter((question) => {
-      if (!question || typeof question !== "object") return false;
-      if (question.excluded === true) return false;
-      if (!Array.isArray(question.options) || question.options.length !== 4) return false;
-      if (
-        typeof question.answerIndex !== "number" ||
-        question.answerIndex < 0 ||
-        question.answerIndex > 3
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }
-
-  function getQuestionById(questionId) {
-    return getAllAvailableQuestions().find((q) => q.id === questionId) || null;
-  }
-
-  function buildBaseFilteredQuestions(settings) {
-    let list = getAllAvailableQuestions();
-
-    if (settings.year !== "all") {
-      list = list.filter((question) => String(question.year) === String(settings.year));
-    }
-
-    if (settings.category !== "all") {
-      list = list.filter((question) => question.category === settings.category);
-    }
-
-    return list;
-  }
-
-  function getWeaknessScore(categoryKey, history) {
-    const stat = history.categoryStats[categoryKey];
-    if (!stat) {
-      return 999;
-    }
-
-    const total = Number(stat.total || 0);
-    const correct = Number(stat.correct || 0);
-
-    if (total <= 0) {
-      return 999;
-    }
-
-    const accuracy = correct / total;
-    const wrongWeight = (1 - accuracy) * 100;
-    const lowExperienceBonus = total < 3 ? 20 : total < 6 ? 10 : 0;
-
-    return wrongWeight + lowExperienceBonus;
-  }
-
-  function sortByWeakness(questions, history) {
-    return [...questions].sort((a, b) => {
-      const scoreA = getWeaknessScore(a.category, history);
-      const scoreB = getWeaknessScore(b.category, history);
-      if (scoreA !== scoreB) {
-        return scoreB - scoreA;
-      }
-      return Math.random() - 0.5;
-    });
-  }
-
-  function buildReviewQuestions(settings, history) {
-    const wrongIds = Object.keys(history.wrongQuestionMap || {}).filter((id) => {
-      return Number(history.wrongQuestionMap[id]) > 0;
-    });
-
-    if (wrongIds.length === 0) {
-      return [];
-    }
-
-    let reviewList = wrongIds
-      .map((id) => getQuestionById(id))
-      .filter(Boolean)
-      .filter((question) => question.excluded !== true);
-
-    if (settings.year !== "all") {
-      reviewList = reviewList.filter((question) => String(question.year) === String(settings.year));
-    }
-
-    if (settings.category !== "all") {
-      reviewList = reviewList.filter((question) => question.category === settings.category);
-    }
-
-    reviewList.sort((a, b) => {
-      const countA = Number(history.wrongQuestionMap[a.id] || 0);
-      const countB = Number(history.wrongQuestionMap[b.id] || 0);
-      if (countA !== countB) {
-        return countB - countA;
-      }
-      return Math.random() - 0.5;
-    });
-
-    return reviewList;
-  }
-
-  function selectQuestionsByMode(settings, history) {
-    const count = clampNumber(Number(settings.count || 10), 1, 30);
-
-    const baseList = buildBaseFilteredQuestions(settings);
-    if (baseList.length === 0) {
-      return [];
-    }
-
-    let selectedPool = [];
-
-    switch (settings.mode) {
-      case "review":
-        selectedPool = buildReviewQuestions(settings, history);
-        break;
-      case "weakness":
-        selectedPool = sortByWeakness(baseList, history);
-        break;
-      case "random":
-        selectedPool = shuffleArray(baseList);
-        break;
-      case "normal":
-      default:
-        selectedPool = [...baseList].sort((a, b) => {
-          if (a.year !== b.year) return b.year - a.year;
-          if (a.category !== b.category) return a.category.localeCompare(b.category, "ja");
-          return a.id.localeCompare(b.id, "ja");
-        });
-        break;
-    }
-
-    if (settings.mode === "weakness") {
-      const grouped = {};
-      selectedPool.forEach((question) => {
-        if (!grouped[question.category]) grouped[question.category] = [];
-        grouped[question.category].push(question);
+    let filtered = all;
+    if (settings.category && settings.category !== 'all') {
+      filtered = all.filter(function (q) {
+        return q.category === settings.category;
       });
-
-      const categoryOrder = Object.keys(grouped).sort((a, b) => {
-        return getWeaknessScore(b, history) - getWeaknessScore(a, history);
-      });
-
-      const mixed = [];
-      let keepGoing = true;
-      while (keepGoing) {
-        keepGoing = false;
-        categoryOrder.forEach((category) => {
-          if (grouped[category].length > 0) {
-            mixed.push(grouped[category].shift());
-            keepGoing = true;
-          }
-        });
-      }
-      selectedPool = mixed;
     }
 
-    if (settings.mode === "review" && selectedPool.length === 0) {
-      return [];
+    if (settings.mode === 'review') {
+      filtered = filtered.slice().reverse();
     }
 
-    if (selectedPool.length <= count) {
-      return selectedPool;
+    if (settings.mode === 'random') {
+      filtered = shuffleArray(filtered);
     }
 
-    return selectedPool.slice(0, count);
-  }
+    const count = Math.max(1, Number(settings.count) || 10);
+    const selected = filtered.slice(0, count);
 
-  function createQuizSession(settings, questions) {
     return {
-      settings,
-      questionIds: questions.map((q) => q.id),
+      settings: settings,
+      questions: selected,
       currentIndex: 0,
+      score: 0,
       answers: [],
       startedAt: Date.now()
     };
   }
 
-  function getCurrentSession() {
-    return getStorage(STORAGE_KEYS.QUIZ_SESSION, null);
+  function saveQuizSession(session) {
+    sessionStorage.setItem('quizSession', JSON.stringify(session));
   }
 
-  function saveCurrentSession(session) {
-    setStorage(STORAGE_KEYS.QUIZ_SESSION, session);
-  }
+  function loadQuizSession() {
+    const raw = sessionStorage.getItem('quizSession');
+    if (!raw) return null;
 
-  function getCurrentResult() {
-    return getStorage(STORAGE_KEYS.QUIZ_RESULT, null);
-  }
-
-  function saveCurrentResult(result) {
-    setStorage(STORAGE_KEYS.QUIZ_RESULT, result);
-  }
-
-  function buildResultData(session) {
-    const questions = session.questionIds
-      .map((id) => getQuestionById(id))
-      .filter(Boolean);
-
-    const answers = Array.isArray(session.answers) ? session.answers : [];
-    const total = questions.length;
-
-    let correctCount = 0;
-    const wrongItems = [];
-    const categoryTally = {};
-
-    questions.forEach((question) => {
-      const answer = answers.find((item) => item.questionId === question.id);
-      const userIndex = answer ? answer.selectedIndex : null;
-      const isCorrect = userIndex === question.answerIndex;
-      const categoryName = getCategoryLabel(question.category, question.categoryName);
-
-      if (isCorrect) {
-        correctCount += 1;
-      } else {
-        wrongItems.push({
-          questionId: question.id,
-          stem: question.stem,
-          year: question.year,
-          category: question.category,
-          categoryName,
-          tags: question.tags || [],
-          selectedIndex: userIndex,
-          correctIndex: question.answerIndex,
-          options: question.options,
-          explanation: question.explanation
-        });
-      }
-
-      if (!categoryTally[question.category]) {
-        categoryTally[question.category] = {
-          categoryName,
-          total: 0,
-          correct: 0
-        };
-      }
-
-      categoryTally[question.category].total += 1;
-      if (isCorrect) {
-        categoryTally[question.category].correct += 1;
-      }
-    });
-
-    const accuracy = total > 0 ? (correctCount / total) * 100 : 0;
-
-    return {
-      settings: session.settings,
-      total,
-      correctCount,
-      accuracy,
-      wrongItems,
-      categoryTally,
-      completedAt: Date.now()
-    };
-  }
-
-  function updateLearningHistoryFromResult(result) {
-    const history = getLearningHistory();
-    history.totalSessions += 1;
-    history.totalAnswers += Number(result.total || 0);
-    history.totalCorrect += Number(result.correctCount || 0);
-
-    Object.entries(result.categoryTally || {}).forEach(([category, stat]) => {
-      if (!history.categoryStats[category]) {
-        history.categoryStats[category] = {
-          total: 0,
-          correct: 0,
-          categoryName: getCategoryLabel(category, stat.categoryName)
-        };
-      }
-
-      history.categoryStats[category].total += Number(stat.total || 0);
-      history.categoryStats[category].correct += Number(stat.correct || 0);
-      history.categoryStats[category].categoryName = getCategoryLabel(
-        category,
-        history.categoryStats[category].categoryName
-      );
-    });
-
-    const wrongIdsThisTime = new Set();
-
-    (result.wrongItems || []).forEach((item) => {
-      wrongIdsThisTime.add(item.questionId);
-      const currentCount = Number(history.wrongQuestionMap[item.questionId] || 0);
-      history.wrongQuestionMap[item.questionId] = currentCount + 1;
-    });
-
-    const currentSession = getCurrentSession();
-    const resultQuestionIds = [];
-    if (currentSession && Array.isArray(currentSession.questionIds)) {
-      resultQuestionIds.push(...currentSession.questionIds);
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
     }
-
-    resultQuestionIds.forEach((questionId) => {
-      if (!wrongIdsThisTime.has(questionId)) {
-        const current = Number(history.wrongQuestionMap[questionId] || 0);
-        if (current > 0) {
-          history.wrongQuestionMap[questionId] = current - 1;
-        }
-      }
-    });
-
-    history.recentResults.unshift({
-      completedAt: result.completedAt,
-      total: result.total,
-      correctCount: result.correctCount,
-      accuracy: result.accuracy,
-      mode: result.settings?.mode || "normal"
-    });
-
-    history.recentResults = history.recentResults.slice(0, 10);
-
-    saveLearningHistory(history);
   }
 
-  function getWeaknessText(history, limit = 3) {
-    const entries = Object.entries(history.categoryStats || {})
-      .map(([category, stat]) => {
-        const total = Number(stat.total || 0);
-        const correct = Number(stat.correct || 0);
-        const accuracy = total > 0 ? (correct / total) * 100 : 0;
-        return {
-          category,
-          categoryName: getCategoryLabel(category, stat.categoryName),
-          total,
-          accuracy
-        };
-      })
-      .filter((item) => item.total > 0)
-      .sort((a, b) => {
-        if (a.accuracy !== b.accuracy) return a.accuracy - b.accuracy;
-        return a.total - b.total;
-      });
+  function saveQuizResult(result) {
+    sessionStorage.setItem('quizResult', JSON.stringify(result));
+  }
 
-    if (entries.length === 0) {
-      return "まだ学習履歴がありません";
+  function loadQuizResult() {
+    const raw = sessionStorage.getItem('quizResult');
+    if (!raw) return null;
+
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
     }
-
-    return entries
-      .slice(0, limit)
-      .map((item) => `${item.categoryName}（正答率 ${formatPercent(item.accuracy)}）`)
-      .join("、");
   }
 
-  function showQuizFallback(quizArea, fallback) {
-    if (quizArea) quizArea.classList.add("is-hidden");
-    if (fallback) fallback.classList.remove("is-hidden");
-  }
+  function initTopPage() {
+    const startForm = document.getElementById('startForm');
+    if (!startForm) return;
 
-  function showResultFallback(summaryCard, fallback) {
-    if (summaryCard) summaryCard.classList.add("is-hidden");
-    if (fallback) fallback.classList.remove("is-hidden");
-  }
+    const themeSelect = document.getElementById('themeSelect');
+    const modeSelect = document.getElementById('modeSelect');
+    const questionCount = document.getElementById('questionCount');
+    const categorySelect = document.getElementById('categorySelect');
 
-   function initIndexPage() {
-    const form = document.getElementById("settingsForm");
-    if (!form) return;
+    const savedTheme = getSavedTheme();
+    applyTheme(savedTheme);
 
-    const yearSelect = document.getElementById("yearSelect");
-    const categorySelect = document.getElementById("categorySelect");
-    const modeSelect = document.getElementById("modeSelect");
-    const countSelect = document.getElementById("countSelect");
-    const themeSelect = document.getElementById("themeSelect");
-    const formMessage = document.getElementById("formMessage");
-    const continueButton = document.getElementById("continueButton");
-    const installAppButton = document.getElementById("installAppButton");
-    const installMessage = document.getElementById("installMessage");
-
-    const savedSettings = getStorage(STORAGE_KEYS.QUIZ_SETTINGS, {
-      year: "all",
-      category: "all",
-      mode: "normal",
-      count: "10",
-      theme: "light"
-    });
-
-    if (yearSelect) yearSelect.value = savedSettings.year || "all";
-    if (categorySelect) categorySelect.value = savedSettings.category || "all";
-    if (modeSelect) modeSelect.value = savedSettings.mode || "normal";
-    if (countSelect) countSelect.value = String(savedSettings.count || "10");
-    if (themeSelect) themeSelect.value = savedSettings.theme || "light";
-
-    applyTheme(savedSettings.theme || "light");
-
-    function saveSettingsFromForm() {
-      const liveSettings = {
-        year: yearSelect ? yearSelect.value : "all",
-        category: categorySelect ? categorySelect.value : "all",
-        mode: modeSelect ? modeSelect.value : "normal",
-        count: countSelect ? countSelect.value : "10",
-        theme: themeSelect ? themeSelect.value : "light"
-      };
-
-      setStorage(STORAGE_KEYS.QUIZ_SETTINGS, liveSettings);
-      applyTheme(liveSettings.theme);
-    }
-
-    [yearSelect, categorySelect, modeSelect, countSelect, themeSelect]
-      .filter(Boolean)
-      .forEach((element) => {
-        element.addEventListener("change", saveSettingsFromForm);
-      });
-    const existingSession = getCurrentSession();
-    if (continueButton) {
-      const canContinue = Boolean(existingSession && Array.isArray(existingSession.questionIds) && existingSession.questionIds.length > 0 && Number(existingSession.currentIndex || 0) < existingSession.questionIds.length);
-      continueButton.classList.toggle("is-hidden", !canContinue);
-      continueButton.addEventListener("click", () => {
-        location.href = "quiz.html";
+    if (themeSelect) {
+      themeSelect.value = savedTheme;
+      themeSelect.addEventListener('change', function () {
+        applyTheme(themeSelect.value);
       });
     }
 
-    if (installAppButton) {
-      const updateInstallUi = () => {
-        const isStandalone = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
-        if (isStandalone) {
-          installAppButton.classList.add("is-hidden");
-          if (installMessage) installMessage.textContent = "この端末ではホーム画面アプリとして利用中です。";
-          return;
-        }
-
-        if (deferredInstallPrompt) {
-          installAppButton.classList.remove("is-hidden");
-          if (installMessage) installMessage.textContent = "ボタンからホーム画面追加・インストールができます。";
-        } else {
-          installAppButton.classList.add("is-hidden");
-          if (installMessage) {
-            installMessage.textContent = "iPhoneはSafariの共有メニューから『ホーム画面に追加』でアプリ風に使えます。";
-          }
-        }
-      };
-
-      installAppButton.addEventListener("click", async () => {
-        if (!deferredInstallPrompt) return;
-        deferredInstallPrompt.prompt();
-        try {
-          await deferredInstallPrompt.userChoice;
-        } catch (error) {
-          // no-op
-        }
-        deferredInstallPrompt = null;
-        updateInstallUi();
-      });
-
-      document.addEventListener("appinstallready", updateInstallUi);
-      document.addEventListener("appinstalledstate", updateInstallUi);
-      updateInstallUi();
-    }
-
-    renderDashboard();
-
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
+    startForm.addEventListener('submit', function (e) {
+      e.preventDefault();
 
       const settings = {
-        year: yearSelect ? yearSelect.value : "all",
-        category: categorySelect ? categorySelect.value : "all",
-        mode: modeSelect ? modeSelect.value : "normal",
-        count: countSelect ? countSelect.value : "10",
-        theme: themeSelect ? themeSelect.value : "light"
+        mode: modeSelect ? modeSelect.value : 'normal',
+        count: questionCount ? Number(questionCount.value) : 10,
+        category: categorySelect ? categorySelect.value : 'all',
+        theme: themeSelect ? themeSelect.value : savedTheme
       };
 
-      const history = getLearningHistory();
-      const selectedQuestions = selectQuestionsByMode(settings, history);
+      applyTheme(settings.theme);
 
-      if (settings.mode === "review" && selectedQuestions.length === 0) {
-        formMessage.textContent =
-          "復習対象の問題がまだありません。先に通常モードなどで学習してからお試しください。";
+      const session = buildSession(settings);
+
+      if (!session.questions.length) {
+        alert('該当する問題がありません。questions.js を確認してください。');
         return;
       }
 
-      if (selectedQuestions.length === 0) {
-        formMessage.textContent =
-          "指定条件に一致する問題がありません。年度・分野の条件を見直してください。";
-        return;
-      }
-
-      formMessage.textContent = "";
-      setStorage(STORAGE_KEYS.QUIZ_SETTINGS, settings);
-      removeStorage(STORAGE_KEYS.QUIZ_RESULT);
-
-      const session = createQuizSession(settings, selectedQuestions);
-      saveCurrentSession(session);
-
-      location.href = "quiz.html";
+      saveQuizSession(session);
+      location.href = 'quiz.html';
     });
-  }
-
-  function renderDashboard() {
-    const history = getLearningHistory();
-
-    const sessionsEl = document.getElementById("dashboardSessions");
-    const answersEl = document.getElementById("dashboardAnswers");
-    const accuracyEl = document.getElementById("dashboardAccuracy");
-    const weaknessEl = document.getElementById("dashboardWeakness");
-
-    if (sessionsEl) sessionsEl.textContent = `${history.totalSessions}回`;
-    if (answersEl) answersEl.textContent = `${history.totalAnswers}問`;
-    if (accuracyEl) {
-      const accuracy =
-        history.totalAnswers > 0 ? (history.totalCorrect / history.totalAnswers) * 100 : 0;
-      accuracyEl.textContent = formatPercent(accuracy);
-    }
-    if (weaknessEl) weaknessEl.textContent = getWeaknessText(history, 1);
   }
 
   function initQuizPage() {
-    const session = getCurrentSession();
-    if (session?.settings?.theme) {
-      applyTheme(session.settings.theme);
-    }
-    const quizArea = document.getElementById("quizArea");
-    const fallback = document.getElementById("quizFallback");
+    const quizArea = document.getElementById('quizArea');
+    if (!quizArea) return;
 
-    if (!session || !Array.isArray(session.questionIds) || session.questionIds.length === 0) {
-      showQuizFallback(quizArea, fallback);
+    const session = loadQuizSession();
+    if (!session || !Array.isArray(session.questions) || !session.questions.length) {
+      location.href = 'index.html';
       return;
     }
 
-    const currentQuestion = getQuestionById(session.questionIds[session.currentIndex]);
-    if (!currentQuestion) {
-      showQuizFallback(quizArea, fallback);
-      return;
-    }
+    const theme =
+      session &&
+      session.settings &&
+      session.settings.theme
+        ? session.settings.theme
+        : getSavedTheme();
 
-    const progressBadge = document.getElementById("progressBadge");
-    const scoreBadge = document.getElementById("scoreBadge");
-    const yearBadge = document.getElementById("yearBadge");
-    const categoryBadge = document.getElementById("categoryBadge");
-    const modeBadge = document.getElementById("modeBadge");
-    const accuracyBadge = document.getElementById("accuracyBadge");
-    const progressBarFill = document.getElementById("progressBarFill");
-    const questionTags = document.getElementById("questionTags");
-    const questionNumber = document.getElementById("questionNumber");
-    const questionStem = document.getElementById("questionStem");
-    const optionsContainer = document.getElementById("optionsContainer");
-    const feedbackArea = document.getElementById("feedbackArea");
-    const feedbackResult = document.getElementById("feedbackResult");
-    const explanationText = document.getElementById("explanationText");
-    const nextButton = document.getElementById("nextButton");
-    const backToTitleButton = document.getElementById("backToTitleButton");
+    applyTheme(theme);
 
-    isAnswerLocked = false;
+    const modeBadge = document.getElementById('modeBadge');
+    const accuracyBadge = document.getElementById('accuracyBadge');
+    const categoryBadge = document.getElementById('categoryBadge');
+    const progressText = document.getElementById('progressText');
+    const progressFill = document.getElementById('progressFill');
+    const questionNumber = document.getElementById('questionNumber');
+    const questionText = document.getElementById('questionText');
+    const optionsArea = document.getElementById('optionsArea');
+    const feedbackArea = document.getElementById('feedbackArea');
+    const answerStatus = document.getElementById('answerStatus');
+    const explanationBox = document.getElementById('explanationBox');
+    const nextButton = document.getElementById('nextButton');
 
-    const currentAnswer = session.answers.find((a) => a.questionId === currentQuestion.id) || null;
-    const correctCount = session.answers.filter((a) => a.isCorrect).length;
-    const currentIndexHuman = session.currentIndex + 1;
-    const totalCount = session.questionIds.length;
-    const categoryName = getCategoryLabel(currentQuestion.category, currentQuestion.categoryName);
+    let answered = false;
 
-    if (progressBadge) {
-      progressBadge.textContent = `第 ${currentIndexHuman} 問 / ${totalCount} 問中`;
-    }
-    if (scoreBadge) {
-      scoreBadge.textContent = `正解数: ${correctCount}`;
-    }
-    if (yearBadge) {
-      yearBadge.textContent = `年度: ${currentQuestion.year}`;
-    }
-    if (categoryBadge) {
-      categoryBadge.textContent = `分野: ${categoryName}`;
-    }
-    if (modeBadge) {
-      modeBadge.textContent = `モード: ${MODE_LABELS[session.settings?.mode] || "通常"}`;
-    }
-    if (accuracyBadge) {
-      const currentAccuracy = session.answers.length > 0 ? (correctCount / session.answers.length) * 100 : 0;
-      accuracyBadge.textContent = `現在正答率: ${formatPercent(currentAccuracy)}`;
-    }
-    if (progressBarFill) {
-      progressBarFill.style.width = `${(currentIndexHuman / totalCount) * 100}%`;
-    }
+    function renderQuestion() {
+      const current = session.questions[session.currentIndex];
+      const total = session.questions.length;
+      const number = session.currentIndex + 1;
+      const accuracy = session.answers.length
+        ? Math.round((session.score / session.answers.length) * 100)
+        : 0;
 
-    if (questionNumber) {
-      questionNumber.textContent = `問題 ${currentIndexHuman}`;
-    }
+      answered = false;
 
-    if (questionStem) {
-      questionStem.innerHTML = currentQuestion.stem;
-    }
+      if (modeBadge) modeBadge.textContent = modeLabel(session.settings.mode);
+      if (accuracyBadge) accuracyBadge.textContent = '正答率 ' + accuracy + '%';
+      if (categoryBadge) categoryBadge.textContent = '分野: ' + categoryLabel(session.settings.category);
+      if (progressText) progressText.textContent = number + ' / ' + total;
+      if (progressFill) progressFill.style.width = ((number / total) * 100) + '%';
+      if (questionNumber) questionNumber.textContent = '第' + number + '問';
+      if (questionText) questionText.textContent = current.question;
 
-    if (questionTags) {
-      questionTags.innerHTML = "";
-      const tagItems = [
-        `年度 ${currentQuestion.year}`,
-        `${currentQuestion.category} ${categoryName}`,
-        ...(Array.isArray(currentQuestion.tags) ? currentQuestion.tags : [])
-      ];
+      if (feedbackArea) feedbackArea.classList.add('hidden');
+      if (answerStatus) {
+        answerStatus.className = 'answer-status';
+        answerStatus.textContent = '';
+      }
+      if (explanationBox) explanationBox.innerHTML = '';
+      if (nextButton) nextButton.classList.add('hidden');
 
-      tagItems.forEach((tag) => {
-        const span = document.createElement("span");
-        span.className = "tag-chip";
-        span.textContent = tag;
-        questionTags.appendChild(span);
-      });
-    }
+      optionsArea.innerHTML = '';
 
-    if (optionsContainer) {
-      optionsContainer.innerHTML = "";
+      current.options.forEach(function (option, index) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'option-button';
+        button.innerHTML =
+          '<span class="option-label">' + String.fromCharCode(65 + index) + '.</span>' +
+          '<span class="option-text">' + escapeHtml(option) + '</span>';
 
-      currentQuestion.options.forEach((optionText, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "option-button";
+        button.addEventListener('click', function () {
+          if (answered) return;
+          answered = true;
 
-        const optionLabel = ["A", "B", "C", "D"][index] || String(index + 1);
-        button.innerHTML = `<strong>${optionLabel}.</strong> ${escapeHtml(optionText)}`;
+          const isCorrect = index === current.answer;
 
-        const isAnswered = Boolean(currentAnswer);
-        if (isAnswered) {
-          button.disabled = true;
-          if (index === currentQuestion.answerIndex) {
-            button.classList.add("correct");
-          }
-          if (
-            currentAnswer &&
-            index === currentAnswer.selectedIndex &&
-            currentAnswer.selectedIndex !== currentQuestion.answerIndex
-          ) {
-            button.classList.add("wrong");
-          }
-        }
-
-        button.addEventListener("click", () => {
-          if (currentAnswer || isAnswerLocked) return;
-          isAnswerLocked = true;
-
-          const isCorrect = index === currentQuestion.answerIndex;
           session.answers.push({
-            questionId: currentQuestion.id,
+            questionId: current.id,
+            question: current.question,
+            options: current.options.slice(),
             selectedIndex: index,
-            isCorrect
+            correctIndex: current.answer,
+            explanation: current.explanation,
+            isCorrect: isCorrect,
+            category: current.category
           });
-          saveCurrentSession(session);
-          initQuizPage();
+
+          if (isCorrect) {
+            session.score += 1;
+          }
+
+          Array.from(optionsArea.querySelectorAll('.option-button')).forEach(function (btn, btnIndex) {
+            btn.disabled = true;
+
+            if (btnIndex === current.answer) {
+              btn.classList.add('correct');
+            }
+
+            if (btnIndex === index && btnIndex !== current.answer) {
+              btn.classList.add('incorrect');
+            }
+
+            if (btnIndex === index) {
+              btn.classList.add('selected');
+            }
+          });
+
+          if (feedbackArea) feedbackArea.classList.remove('hidden');
+
+          if (answerStatus) {
+            answerStatus.className = 'answer-status ' + (isCorrect ? 'status-correct' : 'status-incorrect');
+            answerStatus.textContent = isCorrect ? '正解です' : '不正解です';
+          }
+
+          if (explanationBox) {
+            const correctText = current.options[current.answer] || '';
+            explanationBox.innerHTML =
+              '<div class="explanation-title">解説</div>' +
+              '<div class="explanation-answer">正解: ' + escapeHtml(String.fromCharCode(65 + current.answer) + '. ' + correctText) + '</div>' +
+              '<div class="explanation-body">' + escapeHtml(current.explanation || '解説は未設定です。') + '</div>';
+          }
+
+          saveQuizSession(session);
+
+          if (accuracyBadge) {
+            const newAccuracy = Math.round((session.score / session.answers.length) * 100);
+            accuracyBadge.textContent = '正答率 ' + newAccuracy + '%';
+          }
+
+          if (nextButton) {
+            nextButton.textContent = session.currentIndex >= session.questions.length - 1 ? '結果を見る' : '次へ';
+            nextButton.classList.remove('hidden');
+          }
         });
 
-        optionsContainer.appendChild(button);
+        optionsArea.appendChild(button);
       });
-    }
-
-    if (currentAnswer && feedbackArea && feedbackResult && explanationText && nextButton) {
-      feedbackArea.classList.remove("is-hidden");
-      feedbackResult.textContent = currentAnswer.isCorrect ? "正解です" : "不正解です";
-      feedbackResult.className = `feedback-result ${currentAnswer.isCorrect ? "is-correct" : "is-wrong"}`;
-      explanationText.textContent = currentQuestion.explanation || "解説はありません。";
-      nextButton.classList.remove("is-hidden");
-    } else if (feedbackArea && nextButton) {
-      feedbackArea.classList.add("is-hidden");
-      nextButton.classList.add("is-hidden");
     }
 
     if (nextButton) {
-      nextButton.onclick = () => {
-        if (session.currentIndex < session.questionIds.length - 1) {
-          session.currentIndex += 1;
-          saveCurrentSession(session);
-          initQuizPage();
-        } else {
-          const result = buildResultData(session);
-          saveCurrentResult(result);
-          updateLearningHistoryFromResult(result);
-          location.href = "result.html";
+      nextButton.addEventListener('click', function () {
+        if (session.currentIndex >= session.questions.length - 1) {
+          const result = {
+            score: session.score,
+            total: session.questions.length,
+            answers: session.answers,
+            settings: session.settings,
+            finishedAt: Date.now()
+          };
+          saveQuizResult(result);
+          location.href = 'result.html';
+          return;
         }
-      };
+
+        session.currentIndex += 1;
+        saveQuizSession(session);
+        renderQuestion();
+      });
     }
 
-    if (backToTitleButton) {
-      backToTitleButton.onclick = () => {
-        location.href = "index.html";
-      };
-    }
+    renderQuestion();
   }
 
   function initResultPage() {
-    const result = getCurrentResult();
-    if (result?.settings?.theme) {
-      applyTheme(result.settings.theme);
-    }
-    const summaryCard = document.getElementById("resultSummaryCard");
-    const fallback = document.getElementById("resultFallback");
+    const resultArea = document.getElementById('resultArea');
+    if (!resultArea) return;
 
-    if (!result) {
-      showResultFallback(summaryCard, fallback);
+    const result = loadQuizResult();
+    if (!result || !Array.isArray(result.answers)) {
+      location.href = 'index.html';
       return;
     }
 
-    const correctCountEl = document.getElementById("resultCorrectCount");
-    const totalCountEl = document.getElementById("resultTotalCount");
-    const accuracyEl = document.getElementById("resultAccuracy");
-    const modeEl = document.getElementById("resultMode");
-    const weaknessSummary = document.getElementById("weaknessSummary");
-    const wrongListArea = document.getElementById("wrongListArea");
-    const retryButton = document.getElementById("retrySameSettingsButton");
+    const theme =
+      result &&
+      result.settings &&
+      result.settings.theme
+        ? result.settings.theme
+        : getSavedTheme();
 
-    if (correctCountEl) correctCountEl.textContent = `${result.correctCount}問`;
-    if (totalCountEl) totalCountEl.textContent = `${result.total}問`;
-    if (accuracyEl) accuracyEl.textContent = formatPercent(result.accuracy);
-    if (modeEl) modeEl.textContent = MODE_LABELS[result.settings?.mode] || "通常";
+    applyTheme(theme);
 
-    const history = getLearningHistory();
-    if (weaknessSummary) {
-      weaknessSummary.textContent = getWeaknessText(history, 3);
-    }
+    const scoreValue = document.getElementById('scoreValue');
+    const accuracyValue = document.getElementById('accuracyValue');
+    const modeValue = document.getElementById('modeValue');
+    const categoryValue = document.getElementById('categoryValue');
+    const reviewList = document.getElementById('reviewList');
 
-    if (wrongListArea) {
-      if (!Array.isArray(result.wrongItems) || result.wrongItems.length === 0) {
-        wrongListArea.innerHTML = `<p class="empty-message">全問正解です。お疲れさまでした。</p>`;
-      } else {
-        wrongListArea.innerHTML = result.wrongItems
-          .map((item, idx) => {
-            const optionsHtml = (item.options || [])
-              .map((option, optionIndex) => {
-                const classes = [];
-                if (optionIndex === item.correctIndex) classes.push("correct");
-                if (
-                  optionIndex === item.selectedIndex &&
-                  item.selectedIndex !== item.correctIndex
-                ) {
-                  classes.push("wrong");
-                }
+    const total = Number(result.total) || result.answers.length || 0;
+    const score = Number(result.score) || 0;
+    const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
 
-                return `
-                  <li class="review-option ${classes.join(" ")}">
-                    <span class="review-option-label">${["A", "B", "C", "D"][optionIndex] || optionIndex + 1}</span>
-                    <span class="review-option-text">${escapeHtml(option)}</span>
-                  </li>
-                `;
-              })
-              .join("");
+    if (scoreValue) scoreValue.textContent = score + ' / ' + total;
+    if (accuracyValue) accuracyValue.textContent = accuracy + '%';
+    if (modeValue) modeValue.textContent = modeLabel(result.settings && result.settings.mode);
+    if (categoryValue) categoryValue.textContent = categoryLabel(result.settings && result.settings.category);
 
-            return `
-              <article class="review-card">
-                <div class="review-meta">
-                  <span class="tag-chip">誤答 ${idx + 1}</span>
-                  <span class="tag-chip">${escapeHtml(String(item.year))}年</span>
-                  <span class="tag-chip">${escapeHtml(item.category || "")} ${escapeHtml(item.categoryName || "-")}</span>
-                </div>
-                <div class="review-stem">${item.stem}</div>
-                <ul class="review-options">${optionsHtml}</ul>
-                <div class="review-explanation">
-                  <strong>解説：</strong> ${escapeHtml(item.explanation || "解説はありません。")}
-                </div>
-              </article>
-            `;
-          })
-          .join("");
-      }
-    }
+    if (reviewList) {
+      reviewList.innerHTML = '';
 
-    if (retryButton) {
-      retryButton.onclick = () => {
-        const settings = result.settings || getStorage(STORAGE_KEYS.QUIZ_SETTINGS, null);
-        if (!settings) {
-          location.href = "index.html";
-          return;
-        }
+      result.answers.forEach(function (item, index) {
+        const review = document.createElement('article');
+        review.className = 'result-question-card';
 
-        const historyNow = getLearningHistory();
-        const selectedQuestions = selectQuestionsByMode(settings, historyNow);
+        const selectedText = item.options[item.selectedIndex] || '';
+        const correctText = item.options[item.correctIndex] || '';
 
-        if (!selectedQuestions.length) {
-          location.href = "index.html";
-          return;
-        }
+        review.innerHTML =
+          '<div class="review-top">' +
+            '<div class="review-number">第' + (index + 1) + '問</div>' +
+            '<div class="review-badge ' + (item.isCorrect ? 'review-badge-correct' : 'review-badge-incorrect') + '">' +
+              (item.isCorrect ? '正解' : '不正解') +
+            '</div>' +
+          '</div>' +
+          '<div class="review-question">' + escapeHtml(item.question) + '</div>' +
+          '<div class="review-answer-block">' +
+            '<div class="review-line"><span class="review-label">あなたの解答</span><span class="review-user ' + (item.isCorrect ? 'text-correct' : 'text-incorrect') + '">' +
+              escapeHtml(String.fromCharCode(65 + item.selectedIndex) + '. ' + selectedText) +
+            '</span></div>' +
+            '<div class="review-line"><span class="review-label">正解</span><span class="review-correct text-correct">' +
+              escapeHtml(String.fromCharCode(65 + item.correctIndex) + '. ' + correctText) +
+            '</span></div>' +
+          '</div>' +
+          '<div class="review-explanation">' +
+            '<div class="explanation-title">解説</div>' +
+            '<div class="explanation-body">' + escapeHtml(item.explanation || '解説は未設定です。') + '</div>' +
+          '</div>';
 
-        setStorage(STORAGE_KEYS.QUIZ_SETTINGS, settings);
-        const session = createQuizSession(settings, selectedQuestions);
-        saveCurrentSession(session);
-        removeStorage(STORAGE_KEYS.QUIZ_RESULT);
-        location.href = "quiz.html";
-      };
+        reviewList.appendChild(review);
+      });
     }
   }
 
-   function init() {
-    const savedSettings = getStorage(STORAGE_KEYS.QUIZ_SETTINGS, {
-      theme: "light"
-    });
-    applyTheme(savedSettings.theme || "light");
-
-    const page = document.body?.dataset?.page;
-
-    switch (page) {
-      case "index":
-        initIndexPage();
-        break;
-      case "quiz":
-        initQuizPage();
-        break;
-      case "result":
-        initResultPage();
-        break;
-      default:
-        break;
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener('DOMContentLoaded', function () {
+    initTopPage();
+    initQuizPage();
+    initResultPage();
+  });
 })();

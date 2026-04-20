@@ -4,106 +4,62 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>結果 | コンクリート技士 試験対策ゲーム</title>
-  <link rel="stylesheet" href="style.css?v=20260420-2" />
-<script src="app.js?v=20260420-2"></script>
-  <meta name="theme-color" content="#2f6fb2" />
-  
-  <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body data-page="result">
-<script>
-(function () {
-  try {
-    const settings = JSON.parse(localStorage.getItem("concreteQuizSettings") || "{}");
-    const session = JSON.parse(localStorage.getItem("concreteQuizSession") || "{}");
-    const result = JSON.parse(localStorage.getItem("concreteQuizResult") || "{}");
+<body>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+          document.body.classList.add('theme-dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
 
-    const theme =
-      (session && session.settings && session.settings.theme) ||
-      (result && result.settings && result.settings.theme) ||
-      (settings && settings.theme) ||
-      "light";
+  <main class="page-container result-shell">
+    <section id="resultArea" class="result-card">
+      <header class="result-header">
+        <span class="badge">結果</span>
+        <h1 class="result-title">学習結果</h1>
+        <p class="result-lead">今回の成績と復習ポイントを確認できます。</p>
+      </header>
 
-    if (theme === "dark") {
-      document.body.classList.add("theme-dark");
-    }
-  } catch (e) {
-    // 何もしない
-  }
-})();
-</script>
-  <div class="app-shell">
-    <header class="page-header compact-header">
-      <div class="header-inner">
-        <p class="eyebrow">結果確認・復習</p>
-        <h1>演習結果</h1>
-      </div>
-    </header>
+      <section class="summary-grid">
+        <article class="summary-card stat-box">
+          <div class="stat-label">得点</div>
+          <div id="scoreValue" class="stat-value">0 / 0</div>
+        </article>
 
-    <main class="page-main">
-      <section id="resultSummaryCard" class="card">
-        <h2 class="section-title">今回の結果</h2>
+        <article class="summary-card stat-box">
+          <div class="stat-label">正答率</div>
+          <div id="accuracyValue" class="stat-value">0%</div>
+        </article>
 
-        <div class="result-summary-grid">
-          <div class="dashboard-card large">
-            <span class="dashboard-label">正解数</span>
-            <strong id="resultCorrectCount">-</strong>
-          </div>
-          <div class="dashboard-card large">
-            <span class="dashboard-label">出題数</span>
-            <strong id="resultTotalCount">-</strong>
-          </div>
-          <div class="dashboard-card large">
-            <span class="dashboard-label">正答率</span>
-            <strong id="resultAccuracy">-</strong>
-          </div>
-          <div class="dashboard-card large">
-            <span class="dashboard-label">出題モード</span>
-            <strong id="resultMode">-</strong>
-          </div>
-        </div>
+        <article class="summary-card stat-box">
+          <div class="stat-label">出題モード</div>
+          <div id="modeValue" class="stat-value stat-value-small">--</div>
+        </article>
 
-        <div class="info-box">
-          <h3>苦手分野</h3>
-          <p id="weaknessSummary" class="text-block">集計中です。</p>
-        </div>
-
-        <div class="action-row action-row-spread">
-          <button id="retrySameSettingsButton" class="button button-primary" type="button">同じ条件でもう一度挑戦</button>
-          <a href="index.html" class="button button-secondary">タイトルへ戻る</a>
-        </div>
+        <article class="summary-card stat-box">
+          <div class="stat-label">分野</div>
+          <div id="categoryValue" class="stat-value stat-value-small">--</div>
+        </article>
       </section>
 
-      <section class="card">
-        <h2 class="section-title">今回間違えた問題</h2>
-        <div id="wrongListArea" class="review-list">
-          <p class="empty-message">読み込み中です。</p>
-        </div>
+      <section class="result-actions">
+        <a class="secondary-button link-button" href="index.html">トップへ戻る</a>
       </section>
 
-      <section class="card">
-        <h2 class="section-title">学習メモ</h2>
-        <p class="text-block">
-          間違えた問題は localStorage に蓄積されるため、次回は「間違えた問題だけ」モードで復習できます。
-        </p>
-        <p class="text-block">
-          また、分野別の正答率も保存されるため、「苦手分野優先」モードで弱点補強に使えます。
-        </p>
+      <section class="review-section">
+        <h2 class="section-title">解答レビュー</h2>
+        <div id="reviewList" class="review-list"></div>
       </section>
-
-      <section id="resultFallback" class="card is-hidden">
-        <h2 class="section-title">結果データが見つかりません</h2>
-        <p class="text-block">先に問題演習を開始してください。</p>
-        <div class="action-row">
-          <a href="index.html" class="button button-primary">タイトルへ戻る</a>
-        </div>
-      </section>
-    </main>
-  </div>
+    </section>
+  </main>
 
   <script src="questions.js"></script>
   <script src="app.js"></script>
-  
 </body>
 </html>

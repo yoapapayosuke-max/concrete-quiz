@@ -4,199 +4,90 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>コンクリート技士 試験対策ゲーム</title>
-  <link rel="stylesheet" href="style.css?v=20260420-1" />
+  <link rel="stylesheet" href="style.css" />
   <meta name="theme-color" content="#2f6fb2" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-<style>
-body.theme-dark {
-  background: #0f131a !important;
-  color: #eef3f8 !important;
-}
-body.theme-dark .card {
-  background: #171c24 !important;
-  color: #eef3f8 !important;
-}
-body.theme-dark select,
-body.theme-dark .info-box,
-body.theme-dark .dashboard-card,
-body.theme-dark .question-stem,
-body.theme-dark .explanation-box,
-body.theme-dark .tag-chip,
-body.theme-dark .badge,
-body.theme-dark .badge-muted,
-body.theme-dark .option-button,
-body.theme-dark .review-card,
-body.theme-dark .review-option {
-  background: #202733 !important;
-  color: #eef3f8 !important;
-  border-color: #2a3442 !important;
-}
-</style>
 </head>
-<body data-page="index">
-  <div class="app-shell">
-    <header class="page-header">
-      <div class="header-inner">
-        <p class="eyebrow">スマホ対応・学習記録対応</p>
-        <h1>コンクリート技士 試験対策ゲーム</h1>
-        <p class="lead">
-          実際の試験演習に近い感覚で、年度・分野・出題モードを選んで学習できる択一式Webアプリです。
-          問題データは別ファイル管理なので、あとから大量追加しやすい構成です。
+<body>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('theme') || 'light';
+        if (theme === 'dark') {
+          document.body.classList.add('theme-dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <main class="page-container app-shell">
+    <section class="hero-card title-card">
+      <div class="hero-head">
+        <span class="badge">社内教育 / 自主学習対応</span>
+        <h1 class="page-title">コンクリート技士 試験対策ゲーム</h1>
+        <p class="hero-text">
+          分野別に問題を解きながら、試験対策と知識定着を進めるWebアプリです。
         </p>
       </div>
-    </header>
 
-    <main class="page-main">
-      <section class="card">
-        <h2 class="section-title">学習設定</h2>
-
-        <form id="settingsForm" class="settings-form" novalidate>
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="yearSelect">年度</label>
-              <select id="yearSelect" name="year">
-                <option value="all">すべて</option>
-                <option value="2016">2016</option>
-                <option value="2017">2017</option>
-                <option value="2018">2018</option>
-                <option value="2019">2019</option>
-                <option value="2020">2020</option>
-                <option value="2021">2021</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="categorySelect">分野</label>
-              <select id="categorySelect" name="category">
-                <option value="all">すべて</option>
-                <option value="a">a 材料</option>
-                <option value="b">b 配合</option>
-                <option value="c">c フレッシュコンクリートの性質</option>
-                <option value="d">d 硬化コンクリート</option>
-                <option value="e">e 製造・品質管理</option>
-                <option value="f">f 施工</option>
-                <option value="g">g 特殊コンクリート</option>
-                <option value="h">h 構造・力学・法令・その他</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="modeSelect">出題モード</label>
-              <select id="modeSelect" name="mode">
-                <option value="normal">通常</option>
-                <option value="random">完全ランダム</option>
-                <option value="weakness">苦手分野優先</option>
-                <option value="review">間違えた問題だけ</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="countSelect">問題数</label>
-              <select id="countSelect" name="count">
-                <option value="5">5問</option>
-                <option value="10" selected>10問</option>
-                <option value="20">20問</option>
-                <option value="30">30問</option>
-              </select>
-            </div>
-          </div>
-<div class="form-group">
-  <label for="themeSelect">画面テーマ</label>
-  <select id="themeSelect" name="theme">
-    <option value="light">ライト</option>
-    <option value="dark">ダーク</option>
-  </select>
-</div>
-          <div class="info-box">
-            <h3>使い方</h3>
-            <ul class="feature-list">
-              <li>年度・分野・出題モード・問題数を選んでスタートします。</li>
-              <li>問題画面では、進捗・現在の正解数・年度・分野・タグを確認できます。</li>
-              <li>結果画面では、今回間違えた問題と苦手分野をまとめて復習できます。</li>
-              <li>苦手分野優先モードは、過去の学習履歴も使って出題を調整します。</li>
-            </ul>
+      <form id="startForm" class="settings-card form-stack" novalidate>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="modeSelect">出題モード</label>
+            <select id="modeSelect" name="mode">
+              <option value="normal">通常</option>
+              <option value="random">ランダム</option>
+              <option value="review">復習向け</option>
+            </select>
           </div>
 
-          <div class="action-row">
-            <button type="submit" class="button button-primary button-large">スタート</button>
-            <button type="button" id="continueButton" class="button button-secondary button-large is-hidden">前回の続きから</button>
-            <button type="button" id="installAppButton" class="button button-secondary button-large is-hidden">ホーム画面に追加</button>
+          <div class="form-group">
+            <label for="questionCount">問題数</label>
+            <select id="questionCount" name="count">
+              <option value="10">10問</option>
+              <option value="20">20問</option>
+              <option value="30">30問</option>
+              <option value="50">50問</option>
+            </select>
           </div>
 
-          <p class="quick-note">Windowsは同梱の <code>start_quiz_server.bat</code> をダブルクリックすると、ブラウザで自動起動できます。</p>
-          <p id="installMessage" class="subtle-message" aria-live="polite"></p>
-          <p id="formMessage" class="form-message" aria-live="polite"></p>
-        </form>
-      </section>
+          <div class="form-group">
+            <label for="categorySelect">分野</label>
+            <select id="categorySelect" name="category">
+              <option value="all">すべて</option>
+              <option value="a">a 材料</option>
+              <option value="b">b 配合</option>
+              <option value="c">c フレッシュコンクリートの性質</option>
+              <option value="d">d 硬化コンクリート</option>
+              <option value="e">e 製造・品質管理</option>
+              <option value="f">f 施工</option>
+              <option value="g">g 特殊コンクリート</option>
+              <option value="h">h 構造・力学・法令・その他</option>
+            </select>
+          </div>
 
-      <section class="card">
-        <h2 class="section-title">現在の学習状況</h2>
-        <div id="dashboardArea" class="dashboard-grid">
-          <div class="dashboard-card">
-            <span class="dashboard-label">総学習回数</span>
-            <strong id="dashboardSessions">-</strong>
-          </div>
-          <div class="dashboard-card">
-            <span class="dashboard-label">総解答数</span>
-            <strong id="dashboardAnswers">-</strong>
-          </div>
-          <div class="dashboard-card">
-            <span class="dashboard-label">総正答率</span>
-            <strong id="dashboardAccuracy">-</strong>
-          </div>
-          <div class="dashboard-card">
-            <span class="dashboard-label">直近の苦手分野</span>
-            <strong id="dashboardWeakness">-</strong>
+          <div class="form-group">
+            <label for="themeSelect">表示テーマ</label>
+            <select id="themeSelect" name="theme">
+              <option value="light">ライト</option>
+              <option value="dark">ダーク</option>
+            </select>
           </div>
         </div>
-      </section>
 
-      <section class="card">
-        <h2 class="section-title">補足</h2>
-        <p class="text-block">
-          このアプリは、問題データを <code>questions.js</code> に分離しています。
-          将来的に <code>questions_2021.js</code> のように年度別分割へ発展させやすい設計です。
-        </p>
-        <p class="text-block">
-          また、<code>excluded: true</code> の問題は自動的に出題対象から除外されるため、
-          作成途中の問題や確認中の問題を安全に管理できます。
-        </p>
-      </section>
-    </main>
-  </div>
+        <div class="info-row">
+          <span class="tag-chip">スマホ対応</span>
+          <span class="tag-chip">GitHub Pages対応</span>
+          <span class="tag-chip">ダークモード対応</span>
+        </div>
+
+        <div class="button-row">
+          <button type="submit" class="primary-button">スタート</button>
+        </div>
+      </form>
+    </section>
+  </main>
 
   <script src="questions.js"></script>
-  <script src="app.js?v=20260420-1"></script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const themeSelect = document.getElementById("themeSelect");
-  if (!themeSelect) return;
-
-  const savedTheme = localStorage.getItem("concreteQuizTheme") || "light";
-  themeSelect.value = savedTheme;
-
-  if (savedTheme === "dark") {
-    document.body.classList.add("theme-dark");
-  }
-
-  themeSelect.addEventListener("change", function () {
-    const selectedTheme = themeSelect.value;
-    localStorage.setItem("concreteQuizTheme", selectedTheme);
-
-    if (selectedTheme === "dark") {
-      document.body.classList.add("theme-dark");
-    } else {
-      document.body.classList.remove("theme-dark");
-    }
-  });
-});
-</script>
-
+  <script src="app.js"></script>
 </body>
 </html>
