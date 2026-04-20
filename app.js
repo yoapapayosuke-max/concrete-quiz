@@ -45,8 +45,20 @@
     } catch (e) {}
 
     try {
+      if (typeof QUESTIONS !== 'undefined' && Array.isArray(QUESTIONS)) {
+        return QUESTIONS;
+      }
+    } catch (e) {}
+
+    try {
       if (typeof window !== 'undefined' && Array.isArray(window.questions)) {
         return window.questions;
+      }
+    } catch (e) {}
+
+    try {
+      if (typeof window !== 'undefined' && Array.isArray(window.QUESTIONS)) {
+        return window.QUESTIONS;
       }
     } catch (e) {}
 
@@ -208,7 +220,7 @@
       const session = buildSession(settings);
 
       if (!session.questions.length) {
-        alert('問題データを読み込めませんでした。questions.js の形式を確認してください。');
+        alert('問題データを読み込めませんでした。questions.js の変数名や形式を確認してください。');
         return;
       }
 
