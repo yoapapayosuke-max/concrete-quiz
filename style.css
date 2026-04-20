@@ -379,8 +379,9 @@ select {
   margin-bottom: 18px;
   padding: 16px;
   border-radius: 14px;
-  background: #fbfdff;
-  border: 1px solid #dde7f1;
+  background: var(--secondary);
+  border: 1px solid var(--line);
+  color: var(--text);
   font-size: 1.04rem;
   line-height: 1.9;
   white-space: pre-wrap;
@@ -396,8 +397,8 @@ select {
   min-height: 64px;
   padding: 16px 16px 16px 18px;
   border-radius: 16px;
-  border: 1px solid #d7e3ef;
-  background: #fff;
+  border: 1px solid var(--line);
+  background: var(--card);
   text-align: left;
   color: var(--text);
   font-weight: 600;
@@ -405,10 +406,9 @@ select {
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
-
 .option-button:hover {
-  border-color: #9fc0e3;
-  background: #f8fbff;
+  border-color: var(--primary);
+  background: var(--secondary);
 }
 
 .option-button:disabled {
@@ -468,8 +468,8 @@ select {
 .explanation-box {
   padding: 16px;
   border-radius: 14px;
-  background: #fafcff;
-  border: 1px solid #dbe6f2;
+  background: var(--secondary);
+  border: 1px solid var(--line);
 }
 
 .explanation-box h3 {
@@ -489,10 +489,10 @@ select {
 }
 
 .review-card {
-  padding: 16px;
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: #fbfdff;
-  border: 1px solid #dde7f1;
+  padding: 16px;
+  background: var(--secondary);
 }
 
 .review-card h3 {
@@ -701,9 +701,10 @@ select {
   display: flex;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid #d7e3ef;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--card);
+  color: var(--text);
 }
 
 .review-option.correct {
@@ -770,3 +771,18 @@ select {
     width: 100%;
   }
 }
+body.theme-dark .question-stem,
+body.theme-dark .option-button,
+body.theme-dark .review-option,
+body.theme-dark .review-stem,
+body.theme-dark .review-explanation,
+body.theme-dark #questionStem,
+body.theme-dark #optionsContainer button {
+  color: var(--text) !important;
+}
+
+body.theme-dark .option-button strong,
+body.theme-dark .review-option-label {
+  color: var(--text) !important;
+}
+
