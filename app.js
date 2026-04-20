@@ -641,6 +641,9 @@
 
   function initQuizPage() {
     const session = getCurrentSession();
+    if (session?.settings?.theme) {
+      applyTheme(session.settings.theme);
+    }
     const quizArea = document.getElementById("quizArea");
     const fallback = document.getElementById("quizFallback");
 
@@ -806,6 +809,9 @@
 
   function initResultPage() {
     const result = getCurrentResult();
+    if (result?.settings?.theme) {
+      applyTheme(result.settings.theme);
+    }
     const summaryCard = document.getElementById("resultSummaryCard");
     const fallback = document.getElementById("resultFallback");
 
