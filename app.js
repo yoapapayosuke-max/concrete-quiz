@@ -1,8 +1,10 @@
 (function () {
   'use strict';
 
+  var CATEGORY_ORDER = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
   function applyTheme(theme) {
-    const safeTheme = theme === 'dark' ? 'dark' : 'light';
+    var safeTheme = theme === 'dark' ? 'dark' : 'light';
     document.body.classList.toggle('theme-dark', safeTheme === 'dark');
     try {
       localStorage.setItem('theme', safeTheme);
@@ -27,10 +29,10 @@
   }
 
   function shuffleArray(array) {
-    const copy = array.slice();
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const tmp = copy[i];
+    var copy = array.slice();
+    for (var i = copy.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = copy[i];
       copy[i] = copy[j];
       copy[j] = tmp;
     }
@@ -66,14 +68,14 @@
   }
 
   function normalizeQuestions() {
-    const source = getQuestionSource();
+    var source = getQuestionSource();
 
     return source
       .map(function (q, index) {
         if (!q || typeof q !== 'object') return null;
 
-        const options = Array.isArray(q.options) ? q.options.slice() : [];
-        let answerIndex = Number(q.answer);
+        var options = Array.isArray(q.options) ? q.options.slice() : [];
+        var answerIndex = Number(q.answer);
 
         if (!Number.isInteger(answerIndex) && typeof q.answerIndex === 'number') {
           answerIndex = Number(q.answerIndex);
@@ -103,7 +105,7 @@
   }
 
   function categoryLabel(value) {
-    const map = {
+    var map = {
       all: 'すべて',
       a: 'a 材料',
       b: 'b 配合',
@@ -118,19 +120,20 @@
   }
 
   function modeLabel(value) {
-    const map = {
+    var map = {
       normal: '通常',
       random: 'ランダム',
-      wrongOnly: '間違えた問題の復習'
+      wrongOnly: '間違えた問題の復習',
+      weakCategory: '正答率の低い分野の復習'
     };
     return map[value] || value || '通常';
   }
 
   function getWrongQuestionIds() {
     try {
-      const raw = localStorage.getItem('wrongQuestionIds');
+      var raw = localStorage.getItem('wrongQuestionIds');
       if (!raw) return [];
-      const parsed = JSON.parse(raw);
+      var parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       return [];
@@ -139,17 +142,58 @@
 
   function saveWrongQuestionIds(ids) {
     try {
-      const uniq = Array.from(new Set(ids));
+      var uniq = Array.from(new Set(ids));
       localStorage.setItem('wrongQuestionIds', JSON.stringify(uniq));
     } catch (e) {}
   }
 
+  function getPerformanceStats() {
+    try {
+      var raw = localStorage.getItem('performanceStats');
+      if (!raw) {
+        return {
+          totalAnswered: 0,
+          totalCorrect: 0,
+          categories: {}
+        };
+      }
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') throw new Error('invalid');
+      if (!parsed.categories || typeof parsed.categories !== 'object') {
+        parsed.categories = {};
+      }
+      if (typeof parsed.totalAnswered !== 'number') parsed.totalAnswered = 0;
+      if (typeof parsed.totalCorrect !== 'number') parsed.totalCorrect = 0;
+      return parsed;
+    } catch (e) {
+      return {
+        totalAnswered: 0,
+        totalCorrect: 0,
+        categories: {}
+      };
+    }
+  }
+
+  function savePerformanceStats(stats) {
+    try {
+      localStorage.setItem('performanceStats', JSON.stringify(stats));
+    } catch (e) {}
+  }
+
+  function resetPerformanceStats() {
+    try {
+      localStorage.removeItem('performanceStats');
+      localStorage.removeItem('wrongQuestionIds');
+    } catch (e) {}
+  }
+
   function updateWrongQuestionHistory(resultAnswers) {
-    const currentWrongIds = getWrongQuestionIds();
-    const wrongSet = new Set(currentWrongIds);
+    var currentWrongIds = getWrongQuestionIds();
+    var wrongSet = new Set(currentWrongIds);
 
     resultAnswers.forEach(function (item) {
       if (!item || !item.questionId) return;
+
       if (item.isCorrect) {
         wrongSet.delete(item.questionId);
       } else {
@@ -160,19 +204,99 @@
     saveWrongQuestionIds(Array.from(wrongSet));
   }
 
-  function buildSession(settings) {
-    const all = normalizeQuestions();
-    let filtered = all;
+  function updatePerformanceStats(resultAnswers) {
+    var stats = getPerformanceStats();
 
-    if (settings.category && settings.category !== 'all') {
+    resultAnswers.forEach(function (item) {
+      if (!item) return;
+
+      stats.totalAnswered += 1;
+      if (item.isCorrect) {
+        stats.totalCorrect += 1;
+      }
+
+      var category = item.category || 'all';
+      if (!stats.categories[category]) {
+        stats.categories[category] = {
+          answered: 0,
+          correct: 0
+        };
+      }
+
+      stats.categories[category].answered += 1;
+      if (item.isCorrect) {
+        stats.categories[category].correct += 1;
+      }
+    });
+
+    savePerformanceStats(stats);
+  }
+
+  function getWeakestCategory(stats) {
+    var categories = (stats && stats.categories) || {};
+    var weakest = null;
+
+    CATEGORY_ORDER.forEach(function (categoryKey) {
+      var item = categories[categoryKey];
+      if (!item || !item.answered) return;
+
+      var accuracy = item.correct / item.answered;
+
+      if (!weakest) {
+        weakest = {
+          category: categoryKey,
+          accuracy: accuracy,
+          answered: item.answered
+        };
+        return;
+      }
+
+      if (accuracy < weakest.accuracy) {
+        weakest = {
+          category: categoryKey,
+          accuracy: accuracy,
+          answered: item.answered
+        };
+        return;
+      }
+
+      if (accuracy === weakest.accuracy && item.answered > weakest.answered) {
+        weakest = {
+          category: categoryKey,
+          accuracy: accuracy,
+          answered: item.answered
+        };
+      }
+    });
+
+    return weakest;
+  }
+
+  function buildSession(settings) {
+    var all = normalizeQuestions();
+    var filtered = all;
+
+    if (settings.mode === 'weakCategory') {
+      var stats = getPerformanceStats();
+      var weakest = getWeakestCategory(stats);
+
+      if (!weakest) {
+        filtered = [];
+      } else {
+        settings.weakCategory = weakest.category;
+        filtered = all.filter(function (q) {
+          return q.category === weakest.category;
+        });
+      }
+    } else if (settings.category && settings.category !== 'all') {
       filtered = filtered.filter(function (q) {
         return q.category === settings.category;
       });
     }
 
     if (settings.mode === 'wrongOnly') {
-      const wrongIds = getWrongQuestionIds();
-      const wrongSet = new Set(wrongIds);
+      var wrongIds = getWrongQuestionIds();
+      var wrongSet = new Set(wrongIds);
       filtered = filtered.filter(function (q) {
         return wrongSet.has(q.id);
       });
@@ -182,8 +306,8 @@
       filtered = shuffleArray(filtered);
     }
 
-    const count = Math.max(1, Number(settings.count) || 10);
-    const selected = filtered.slice(0, count);
+    var count = Math.max(1, Number(settings.count) || 10);
+    var selected = filtered.slice(0, count);
 
     return {
       settings: settings,
@@ -200,7 +324,7 @@
   }
 
   function loadQuizSession() {
-    const raw = sessionStorage.getItem('quizSession');
+    var raw = sessionStorage.getItem('quizSession');
     if (!raw) return null;
     try {
       return JSON.parse(raw);
@@ -214,7 +338,7 @@
   }
 
   function loadQuizResult() {
-    const raw = sessionStorage.getItem('quizResult');
+    var raw = sessionStorage.getItem('quizResult');
     if (!raw) return null;
     try {
       return JSON.parse(raw);
@@ -223,15 +347,44 @@
     }
   }
 
+  function renderCumulativeStats() {
+    var stats = getPerformanceStats();
+    var wrongIds = getWrongQuestionIds();
+    var weakest = getWeakestCategory(stats);
+    var overallAccuracy = stats.totalAnswered > 0
+      ? Math.round((stats.totalCorrect / stats.totalAnswered) * 100)
+      : 0;
+
+    var totalAnsweredValue = document.getElementById('totalAnsweredValue');
+    var overallAccuracyValue = document.getElementById('overallAccuracyValue');
+    var wrongCountValue = document.getElementById('wrongCountValue');
+    var weakCategoryValue = document.getElementById('weakCategoryValue');
+
+    var cumulativeAnsweredValue = document.getElementById('cumulativeAnsweredValue');
+    var cumulativeAccuracyValue = document.getElementById('cumulativeAccuracyValue');
+    var cumulativeWrongValue = document.getElementById('cumulativeWrongValue');
+    var cumulativeWeakCategoryValue = document.getElementById('cumulativeWeakCategoryValue');
+
+    if (totalAnsweredValue) totalAnsweredValue.textContent = String(stats.totalAnswered);
+    if (overallAccuracyValue) overallAccuracyValue.textContent = overallAccuracy + '%';
+    if (wrongCountValue) wrongCountValue.textContent = String(wrongIds.length);
+    if (weakCategoryValue) weakCategoryValue.textContent = weakest ? categoryLabel(weakest.category) : '--';
+
+    if (cumulativeAnsweredValue) cumulativeAnsweredValue.textContent = String(stats.totalAnswered);
+    if (cumulativeAccuracyValue) cumulativeAccuracyValue.textContent = overallAccuracy + '%';
+    if (cumulativeWrongValue) cumulativeWrongValue.textContent = String(wrongIds.length);
+    if (cumulativeWeakCategoryValue) cumulativeWeakCategoryValue.textContent = weakest ? categoryLabel(weakest.category) : '--';
+  }
+
   function startQuiz() {
-    const themeSelect = document.getElementById('themeSelect');
-    const modeSelect = document.getElementById('modeSelect');
-    const questionCount = document.getElementById('questionCount');
-    const categorySelect = document.getElementById('categorySelect');
+    var themeSelect = document.getElementById('themeSelect');
+    var modeSelect = document.getElementById('modeSelect');
+    var questionCount = document.getElementById('questionCount');
+    var categorySelect = document.getElementById('categorySelect');
 
-    const savedTheme = getSavedTheme();
+    var savedTheme = getSavedTheme();
 
-    const settings = {
+    var settings = {
       mode: modeSelect ? modeSelect.value : 'normal',
       count: questionCount ? Number(questionCount.value) : 10,
       category: categorySelect ? categorySelect.value : 'all',
@@ -240,10 +393,15 @@
 
     applyTheme(settings.theme);
 
-    const session = buildSession(settings);
+    var session = buildSession(settings);
 
     if (settings.mode === 'wrongOnly' && !session.questions.length) {
       alert('まだ復習用の問題がありません。通常モードで間違えた問題を作ってから使ってください。');
+      return;
+    }
+
+    if (settings.mode === 'weakCategory' && !session.questions.length) {
+      alert('まだ分野別の成績データがありません。通常モードで問題を解いてから使ってください。');
       return;
     }
 
@@ -257,13 +415,14 @@
   }
 
   function initTopPage() {
-    const startForm = document.getElementById('startForm');
+    var startForm = document.getElementById('startForm');
     if (!startForm) return;
 
-    const themeSelect = document.getElementById('themeSelect');
-    const startButton = startForm.querySelector('button[type="submit"]');
+    var themeSelect = document.getElementById('themeSelect');
+    var startButton = startForm.querySelector('button[type="submit"]');
+    var resetStatsButton = document.getElementById('resetStatsButton');
 
-    const savedTheme = getSavedTheme();
+    var savedTheme = getSavedTheme();
     applyTheme(savedTheme);
 
     if (themeSelect) {
@@ -272,6 +431,8 @@
         applyTheme(themeSelect.value);
       });
     }
+
+    renderCumulativeStats();
 
     startForm.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -284,19 +445,28 @@
         startQuiz();
       });
     }
+
+    if (resetStatsButton) {
+      resetStatsButton.addEventListener('click', function () {
+        var ok = window.confirm('これまでの成績と復習データをリセットします。よろしいですか？');
+        if (!ok) return;
+        resetPerformanceStats();
+        renderCumulativeStats();
+      });
+    }
   }
 
   function initQuizPage() {
-    const quizArea = document.getElementById('quizArea');
+    var quizArea = document.getElementById('quizArea');
     if (!quizArea) return;
 
-    const session = loadQuizSession();
+    var session = loadQuizSession();
     if (!session || !Array.isArray(session.questions) || !session.questions.length) {
       location.href = 'index.html';
       return;
     }
 
-    const theme =
+    var theme =
       session &&
       session.settings &&
       session.settings.theme
@@ -305,36 +475,42 @@
 
     applyTheme(theme);
 
-    const modeBadge = document.getElementById('modeBadge');
-    const accuracyBadge = document.getElementById('accuracyBadge');
-    const categoryBadge = document.getElementById('categoryBadge');
-    const progressText = document.getElementById('progressText');
-    const progressFill = document.getElementById('progressFill');
-    const questionNumber = document.getElementById('questionNumber');
-    const questionText = document.getElementById('questionText');
-    const optionsArea = document.getElementById('optionsArea');
-    const feedbackArea = document.getElementById('feedbackArea');
-    const answerStatus = document.getElementById('answerStatus');
-    const explanationBox = document.getElementById('explanationBox');
-    const nextButton = document.getElementById('nextButton');
+    var modeBadge = document.getElementById('modeBadge');
+    var accuracyBadge = document.getElementById('accuracyBadge');
+    var categoryBadge = document.getElementById('categoryBadge');
+    var progressText = document.getElementById('progressText');
+    var progressFill = document.getElementById('progressFill');
+    var questionNumber = document.getElementById('questionNumber');
+    var questionText = document.getElementById('questionText');
+    var optionsArea = document.getElementById('optionsArea');
+    var feedbackArea = document.getElementById('feedbackArea');
+    var answerStatus = document.getElementById('answerStatus');
+    var explanationBox = document.getElementById('explanationBox');
+    var nextButton = document.getElementById('nextButton');
 
     if (!optionsArea || !questionText || !nextButton) return;
 
-    let answered = false;
+    var answered = false;
 
     function renderQuestion() {
-      const current = session.questions[session.currentIndex];
-      const total = session.questions.length;
-      const number = session.currentIndex + 1;
-      const accuracy = session.answers.length
+      var current = session.questions[session.currentIndex];
+      var total = session.questions.length;
+      var number = session.currentIndex + 1;
+      var accuracy = session.answers.length
         ? Math.round((session.score / session.answers.length) * 100)
         : 0;
 
       answered = false;
 
       if (modeBadge) modeBadge.textContent = modeLabel(session.settings.mode);
+
+      if (session.settings.mode === 'weakCategory' && session.settings.weakCategory) {
+        if (categoryBadge) categoryBadge.textContent = '分野: ' + categoryLabel(session.settings.weakCategory);
+      } else {
+        if (categoryBadge) categoryBadge.textContent = '分野: ' + categoryLabel(session.settings.category);
+      }
+
       if (accuracyBadge) accuracyBadge.textContent = '正答率 ' + accuracy + '%';
-      if (categoryBadge) categoryBadge.textContent = '分野: ' + categoryLabel(session.settings.category);
       if (progressText) progressText.textContent = number + ' / ' + total;
       if (progressFill) progressFill.style.width = ((number / total) * 100) + '%';
       if (questionNumber) questionNumber.textContent = '第' + number + '問';
@@ -351,7 +527,7 @@
       optionsArea.innerHTML = '';
 
       current.options.forEach(function (option, index) {
-        const button = document.createElement('button');
+        var button = document.createElement('button');
         button.type = 'button';
         button.className = 'option-button';
         button.innerHTML =
@@ -362,7 +538,7 @@
           if (answered) return;
           answered = true;
 
-          const isCorrect = index === current.answer;
+          var isCorrect = index === current.answer;
 
           session.answers.push({
             questionId: current.id,
@@ -403,7 +579,7 @@
           }
 
           if (explanationBox) {
-            const correctText = current.options[current.answer] || '';
+            var correctText = current.options[current.answer] || '';
             explanationBox.innerHTML =
               '<div class="explanation-title">解説</div>' +
               '<div class="explanation-answer">正解: ' +
@@ -417,7 +593,7 @@
           saveQuizSession(session);
 
           if (accuracyBadge) {
-            const newAccuracy = Math.round((session.score / session.answers.length) * 100);
+            var newAccuracy = Math.round((session.score / session.answers.length) * 100);
             accuracyBadge.textContent = '正答率 ' + newAccuracy + '%';
           }
 
@@ -433,7 +609,7 @@
 
     nextButton.addEventListener('click', function () {
       if (session.currentIndex >= session.questions.length - 1) {
-        const result = {
+        var result = {
           score: session.score,
           total: session.questions.length,
           answers: session.answers,
@@ -442,6 +618,7 @@
         };
         saveQuizResult(result);
         updateWrongQuestionHistory(session.answers);
+        updatePerformanceStats(session.answers);
         location.href = 'result.html';
         return;
       }
@@ -455,16 +632,16 @@
   }
 
   function initResultPage() {
-    const resultArea = document.getElementById('resultArea');
+    var resultArea = document.getElementById('resultArea');
     if (!resultArea) return;
 
-    const result = loadQuizResult();
+    var result = loadQuizResult();
     if (!result || !Array.isArray(result.answers)) {
       location.href = 'index.html';
       return;
     }
 
-    const theme =
+    var theme =
       result &&
       result.settings &&
       result.settings.theme
@@ -473,30 +650,37 @@
 
     applyTheme(theme);
 
-    const scoreValue = document.getElementById('scoreValue');
-    const accuracyValue = document.getElementById('accuracyValue');
-    const modeValue = document.getElementById('modeValue');
-    const categoryValue = document.getElementById('categoryValue');
-    const reviewList = document.getElementById('reviewList');
+    var scoreValue = document.getElementById('scoreValue');
+    var accuracyValue = document.getElementById('accuracyValue');
+    var modeValue = document.getElementById('modeValue');
+    var categoryValue = document.getElementById('categoryValue');
+    var reviewList = document.getElementById('reviewList');
 
-    const total = Number(result.total) || result.answers.length || 0;
-    const score = Number(result.score) || 0;
-    const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+    var total = Number(result.total) || result.answers.length || 0;
+    var score = Number(result.score) || 0;
+    var accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
 
     if (scoreValue) scoreValue.textContent = score + ' / ' + total;
     if (accuracyValue) accuracyValue.textContent = accuracy + '%';
     if (modeValue) modeValue.textContent = modeLabel(result.settings && result.settings.mode);
-    if (categoryValue) categoryValue.textContent = categoryLabel(result.settings && result.settings.category);
+
+    if (result.settings && result.settings.mode === 'weakCategory' && result.settings.weakCategory) {
+      if (categoryValue) categoryValue.textContent = categoryLabel(result.settings.weakCategory);
+    } else {
+      if (categoryValue) categoryValue.textContent = categoryLabel(result.settings && result.settings.category);
+    }
+
+    renderCumulativeStats();
 
     if (reviewList) {
       reviewList.innerHTML = '';
 
       result.answers.forEach(function (item, index) {
-        const review = document.createElement('article');
+        var review = document.createElement('article');
         review.className = 'result-question-card';
 
-        const selectedText = item.options[item.selectedIndex] || '';
-        const correctText = item.options[item.correctIndex] || '';
+        var selectedText = item.options[item.selectedIndex] || '';
+        var correctText = item.options[item.correctIndex] || '';
 
         review.innerHTML =
           '<div class="review-top">' +

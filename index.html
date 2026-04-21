@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>コンクリート技士 試験対策ゲーム</title>
-  <link rel="stylesheet" href="style.css?v=20260421-3" />
+  <title>コンクリート技士試験対策</title>
+  <link rel="stylesheet" href="style.css?v=20260421-4" />
   <meta name="theme-color" content="#2f6fb2" />
 </head>
 <body>
@@ -23,7 +23,7 @@
     <section class="hero-card title-card">
       <div class="hero-head">
         <span class="badge">社内教育 / 自主学習対応</span>
-        <h1 class="page-title">コンクリート技士 試験対策ゲーム</h1>
+        <h1 class="page-title">コンクリート技士試験対策</h1>
         <p class="hero-text">
           分野別に問題を解きながら、試験対策と知識定着を進めるWebアプリです。
         </p>
@@ -37,6 +37,7 @@
               <option value="normal">通常</option>
               <option value="random">ランダム</option>
               <option value="wrongOnly">間違えた問題の復習</option>
+              <option value="weakCategory">正答率の低い分野の復習</option>
             </select>
           </div>
 
@@ -80,14 +81,37 @@
           <span class="tag-chip">ダークモード対応</span>
         </div>
 
+        <section class="summary-card cumulative-card">
+          <h2 class="section-title">これまでの成績</h2>
+          <div class="summary-grid compact-summary-grid">
+            <article class="stat-box">
+              <div class="stat-label">累計解答数</div>
+              <div id="totalAnsweredValue" class="stat-value stat-value-small">0</div>
+            </article>
+            <article class="stat-box">
+              <div class="stat-label">累計正答率</div>
+              <div id="overallAccuracyValue" class="stat-value stat-value-small">0%</div>
+            </article>
+            <article class="stat-box">
+              <div class="stat-label">間違えた問題</div>
+              <div id="wrongCountValue" class="stat-value stat-value-small">0</div>
+            </article>
+            <article class="stat-box">
+              <div class="stat-label">苦手分野</div>
+              <div id="weakCategoryValue" class="stat-value stat-value-small">--</div>
+            </article>
+          </div>
+        </section>
+
         <div class="button-row">
           <button type="submit" class="primary-button">スタート</button>
+          <button type="button" id="resetStatsButton" class="secondary-button">成績をリセット</button>
         </div>
       </form>
     </section>
   </main>
 
-  <script src="questions.js?v=20260421-3"></script>
-  <script src="app.js?v=20260421-3"></script>
+  <script src="questions.js?v=20260421-4"></script>
+  <script src="app.js?v=20260421-4"></script>
 </body>
 </html>

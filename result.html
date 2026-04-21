@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>結果 | コンクリート技士 試験対策ゲーム</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>結果 | コンクリート技士試験対策</title>
+  <link rel="stylesheet" href="style.css?v=20260421-4" />
 </head>
 <body>
   <script>
@@ -21,9 +21,14 @@
   <main class="page-container result-shell">
     <section id="resultArea" class="result-card">
       <header class="result-header">
-        <span class="badge">結果</span>
-        <h1 class="result-title">学習結果</h1>
-        <p class="result-lead">今回の成績と復習ポイントを確認できます。</p>
+        <div class="title-row">
+          <div>
+            <span class="badge">結果</span>
+            <h1 class="result-title">コンクリート技士試験対策</h1>
+            <p class="result-lead">今回の成績と復習ポイントを確認できます。</p>
+          </div>
+          <a class="secondary-button link-button back-link-button" href="index.html">タイトルに戻る</a>
+        </div>
       </header>
 
       <section class="summary-grid">
@@ -48,8 +53,33 @@
         </article>
       </section>
 
+      <section class="summary-card cumulative-card">
+        <h2 class="section-title">これまでの成績</h2>
+        <div class="summary-grid compact-summary-grid">
+          <article class="stat-box">
+            <div class="stat-label">累計解答数</div>
+            <div id="cumulativeAnsweredValue" class="stat-value stat-value-small">0</div>
+          </article>
+
+          <article class="stat-box">
+            <div class="stat-label">累計正答率</div>
+            <div id="cumulativeAccuracyValue" class="stat-value stat-value-small">0%</div>
+          </article>
+
+          <article class="stat-box">
+            <div class="stat-label">間違えた問題</div>
+            <div id="cumulativeWrongValue" class="stat-value stat-value-small">0</div>
+          </article>
+
+          <article class="stat-box">
+            <div class="stat-label">苦手分野</div>
+            <div id="cumulativeWeakCategoryValue" class="stat-value stat-value-small">--</div>
+          </article>
+        </div>
+      </section>
+
       <section class="result-actions">
-        <a class="secondary-button link-button" href="index.html">トップへ戻る</a>
+        <a class="secondary-button link-button" href="index.html">タイトルへ戻る</a>
       </section>
 
       <section class="review-section">
@@ -59,7 +89,7 @@
     </section>
   </main>
 
-  <script src="questions.js?v=20260421-2"></script>
-<script src="app.js?v=20260421-2"></script>
+  <script src="questions.js?v=20260421-4"></script>
+  <script src="app.js?v=20260421-4"></script>
 </body>
 </html>

@@ -688,3 +688,38 @@ body.theme-dark .text-incorrect {
     align-items: stretch;
   }
 }
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.back-link-button {
+  white-space: nowrap;
+}
+
+.cumulative-card {
+  margin-top: 18px;
+}
+
+.compact-summary-grid {
+  margin-top: 12px;
+}
+
+.result-header {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 768px) {
+  .title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .back-link-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
