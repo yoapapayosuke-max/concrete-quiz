@@ -39,8 +39,8 @@
 
   function getQuestionSource() {
     try {
-      if (typeof questions !== 'undefined' && Array.isArray(questions)) {
-        return questions;
+      if (typeof window !== 'undefined' && Array.isArray(window.QUESTIONS)) {
+        return window.QUESTIONS;
       }
     } catch (e) {}
 
@@ -57,8 +57,8 @@
     } catch (e) {}
 
     try {
-      if (typeof window !== 'undefined' && Array.isArray(window.QUESTIONS)) {
-        return window.QUESTIONS;
+      if (typeof questions !== 'undefined' && Array.isArray(questions)) {
+        return questions;
       }
     } catch (e) {}
 
@@ -75,12 +75,12 @@
         const options = Array.isArray(q.options) ? q.options.slice() : [];
         let answerIndex = Number(q.answer);
 
-        if (!Number.isInteger(answerIndex) && typeof q.correct === 'number') {
-          answerIndex = Number(q.correct);
-        }
-
         if (!Number.isInteger(answerIndex) && typeof q.answerIndex === 'number') {
           answerIndex = Number(q.answerIndex);
+        }
+
+        if (!Number.isInteger(answerIndex) && typeof q.correct === 'number') {
+          answerIndex = Number(q.correct);
         }
 
         if (!Number.isInteger(answerIndex)) {
@@ -90,6 +90,7 @@
         return {
           id: q.id || ('q' + (index + 1)),
           category: q.category || 'all',
+          categoryName: q.categoryName || '',
           question: q.question || q.stem || '問題文が設定されていません。',
           options: options,
           answer: answerIndex,
@@ -120,23 +121,64 @@
     const map = {
       normal: '通常',
       random: 'ランダム',
-      review: '復習向け'
+      wrongOnly: '間違えた問題の復習'
     };
     return map[value] || value || '通常';
+  }
+
+  function getWrongQuestionIds() {
+    try {
+      const raw = localStorage.getItem('wrongQuestionIds');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveWrongQuestionIds(ids) {
+    try {
+      const uniq = Array.from(new Set(ids));
+      localStorage.setItem('wrongQuestionIds', JSON.stringify(uniq));
+    } catch (e) {}
+  }
+
+  function updateWrongQuestionHistory(resultAnswers) {
+    const currentWrongIds = getWrongQuestionIds();
+
+    const wrongSet = new Set(currentWrongIds);
+
+    resultAnswers.forEach(function (item) {
+      if (!item || !item.questionId) return;
+
+      if (item.isCorrect) {
+        wrongSet.delete(item.questionId);
+      } else {
+        wrongSet.add(item.questionId);
+      }
+    });
+
+    saveWrongQuestionIds(Array.from(wrongSet));
   }
 
   function buildSession(settings) {
     const all = normalizeQuestions();
 
     let filtered = all;
+
     if (settings.category && settings.category !== 'all') {
-      filtered = all.filter(function (q) {
+      filtered = filtered.filter(function (q) {
         return q.category === settings.category;
       });
     }
 
-    if (settings.mode === 'review') {
-      filtered = filtered.slice().reverse();
+    if (settings.mode === 'wrongOnly') {
+      const wrongIds = getWrongQuestionIds();
+      const wrongSet = new Set(wrongIds);
+      filtered = filtered.filter(function (q) {
+        return wrongSet.has(q.id);
+      });
     }
 
     if (settings.mode === 'random') {
@@ -186,14 +228,45 @@
     }
   }
 
+  function startQuiz() {
+    const themeSelect = document.getElementById('themeSelect');
+    const modeSelect = document.getElementById('modeSelect');
+    const questionCount = document.getElementById('questionCount');
+    const categorySelect = document.getElementById('categorySelect');
+
+    const savedTheme = getSavedTheme();
+
+    const settings = {
+      mode: modeSelect ? modeSelect.value : 'normal',
+      count: questionCount ? Number(questionCount.value) : 10,
+      category: categorySelect ? categorySelect.value : 'all',
+      theme: themeSelect ? themeSelect.value : savedTheme
+    };
+
+    applyTheme(settings.theme);
+
+    const session = buildSession(settings);
+
+    if (settings.mode === 'wrongOnly' && !session.questions.length) {
+      alert('まだ復習用の問題がありません。通常モードで問題を解き、間違えた問題をためてから使ってください。');
+      return;
+    }
+
+    if (!session.questions.length) {
+      alert('問題データを読み込めませんでした。questions.js の形式を確認してください。');
+      return;
+    }
+
+    saveQuizSession(session);
+    location.href = 'quiz.html';
+  }
+
   function initTopPage() {
     const startForm = document.getElementById('startForm');
     if (!startForm) return;
 
     const themeSelect = document.getElementById('themeSelect');
-    const modeSelect = document.getElementById('modeSelect');
-    const questionCount = document.getElementById('questionCount');
-    const categorySelect = document.getElementById('categorySelect');
+    const startButton = startForm.querySelector('button[type="submit"]');
 
     const savedTheme = getSavedTheme();
     applyTheme(savedTheme);
@@ -207,26 +280,15 @@
 
     startForm.addEventListener('submit', function (e) {
       e.preventDefault();
-
-      const settings = {
-        mode: modeSelect ? modeSelect.value : 'normal',
-        count: questionCount ? Number(questionCount.value) : 10,
-        category: categorySelect ? categorySelect.value : 'all',
-        theme: themeSelect ? themeSelect.value : savedTheme
-      };
-
-      applyTheme(settings.theme);
-
-      const session = buildSession(settings);
-
-      if (!session.questions.length) {
-        alert('問題データを読み込めませんでした。questions.js の変数名や形式を確認してください。');
-        return;
-      }
-
-      saveQuizSession(session);
-      location.href = 'quiz.html';
+      startQuiz();
     });
+
+    if (startButton) {
+      startButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        startQuiz();
+      });
+    }
   }
 
   function initQuizPage() {
@@ -262,7 +324,6 @@
     const nextButton = document.getElementById('nextButton');
 
     if (!optionsArea || !questionText || !nextButton) {
-      console.error('quiz.html のIDが app.js と一致していません');
       return;
     }
 
@@ -385,6 +446,7 @@
           finishedAt: Date.now()
         };
         saveQuizResult(result);
+        updateWrongQuestionHistory(session.answers);
         location.href = 'result.html';
         return;
       }
@@ -467,9 +529,20 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    initTopPage();
-    initQuizPage();
-    initResultPage();
-  });
+  function boot() {
+    try {
+      initTopPage();
+      initQuizPage();
+      initResultPage();
+    } catch (e) {
+      console.error(e);
+      alert('JavaScriptエラーが発生しました。app.js を更新後、再読み込みしてください。');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 })();
