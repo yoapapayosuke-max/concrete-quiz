@@ -455,24 +455,44 @@
   }
 
   function handleInstallApp() {
-    var ua = navigator.userAgent || '';
-    var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  var isAndroid = /Android/i.test(ua);
+  var isWindows = /Windows/i.test(ua);
 
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      deferredInstallPrompt.userChoice.then(function () {
-        deferredInstallPrompt = null;
-      });
-      return;
-    }
-
-    if (isIOS) {
-      alert('iPhone / iPad では、ブラウザの共有ボタンから「ホーム画面に追加」を選んでください。');
-      return;
-    }
-
-    alert('このブラウザでは自動追加を表示できない場合があります。ブラウザのメニューから「ホーム画面に追加」を選んでください。');
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(function () {
+      deferredInstallPrompt = null;
+    });
+    return;
   }
+
+  if (isIOS) {
+    alert(
+      'iPhone / iPad では、Safari の共有ボタンから「ホーム画面に追加」を選んでください。'
+    );
+    return;
+  }
+
+  if (isAndroid) {
+    alert(
+      'Android では、ブラウザのメニューから「ホーム画面に追加」または「アプリをインストール」を選んでください。'
+    );
+    return;
+  }
+
+  if (isWindows) {
+    alert(
+      'Windows では、Chrome または Edge のメニューから「アプリをインストール」または「このサイトをアプリとしてインストール」を選んでください。'
+    );
+    return;
+  }
+
+  alert(
+    'この端末では、ブラウザのメニューから「ホーム画面に追加」または「アプリをインストール」を選んでください。'
+  );
+}
 
   function initTopPage() {
     var startForm = document.getElementById('startForm');
@@ -833,11 +853,15 @@
   }
 
   function setupInstallPromptListener() {
-    window.addEventListener('beforeinstallprompt', function (e) {
-      e.preventDefault();
-      deferredInstallPrompt = e;
-    });
-  }
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+  });
+
+  window.addEventListener('appinstalled', function () {
+    deferredInstallPrompt = null;
+  });
+}
 
   function boot() {
     setupInstallPromptListener();
