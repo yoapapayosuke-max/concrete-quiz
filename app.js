@@ -2,6 +2,7 @@
   'use strict';
 
   var CATEGORY_ORDER = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  var deferredInstallPrompt = null;
 
   function applyTheme(theme) {
     var safeTheme = theme === 'dark' ? 'dark' : 'light';
@@ -124,7 +125,8 @@
       normal: '通常',
       random: 'ランダム',
       wrongOnly: '間違えた問題の復習',
-      weakCategory: '正答率の低い分野の復習'
+      weakCategory: '正答率の低い分野の復習',
+      mock: '模擬試験'
     };
     return map[value] || value || '通常';
   }
@@ -159,9 +161,7 @@
       }
       var parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') throw new Error('invalid');
-      if (!parsed.categories || typeof parsed.categories !== 'object') {
-        parsed.categories = {};
-      }
+      if (!parsed.categories || typeof parsed.categories !== 'object') parsed.categories = {};
       if (typeof parsed.totalAnswered !== 'number') parsed.totalAnswered = 0;
       if (typeof parsed.totalCorrect !== 'number') parsed.totalCorrect = 0;
       return parsed;
@@ -193,12 +193,8 @@
 
     resultAnswers.forEach(function (item) {
       if (!item || !item.questionId) return;
-
-      if (item.isCorrect) {
-        wrongSet.delete(item.questionId);
-      } else {
-        wrongSet.add(item.questionId);
-      }
+      if (item.isCorrect) wrongSet.delete(item.questionId);
+      else wrongSet.add(item.questionId);
     });
 
     saveWrongQuestionIds(Array.from(wrongSet));
@@ -211,22 +207,15 @@
       if (!item) return;
 
       stats.totalAnswered += 1;
-      if (item.isCorrect) {
-        stats.totalCorrect += 1;
-      }
+      if (item.isCorrect) stats.totalCorrect += 1;
 
       var category = item.category || 'all';
       if (!stats.categories[category]) {
-        stats.categories[category] = {
-          answered: 0,
-          correct: 0
-        };
+        stats.categories[category] = { answered: 0, correct: 0 };
       }
 
       stats.categories[category].answered += 1;
-      if (item.isCorrect) {
-        stats.categories[category].correct += 1;
-      }
+      if (item.isCorrect) stats.categories[category].correct += 1;
     });
 
     savePerformanceStats(stats);
@@ -243,36 +232,24 @@
       var accuracy = item.correct / item.answered;
 
       if (!weakest) {
-        weakest = {
-          category: categoryKey,
-          accuracy: accuracy,
-          answered: item.answered
-        };
+        weakest = { category: categoryKey, accuracy: accuracy, answered: item.answered };
         return;
       }
 
       if (accuracy < weakest.accuracy) {
-        weakest = {
-          category: categoryKey,
-          accuracy: accuracy,
-          answered: item.answered
-        };
+        weakest = { category: categoryKey, accuracy: accuracy, answered: item.answered };
         return;
       }
 
       if (accuracy === weakest.accuracy && item.answered > weakest.answered) {
-        weakest = {
-          category: categoryKey,
-          accuracy: accuracy,
-          answered: item.answered
-        };
+        weakest = { category: categoryKey, accuracy: accuracy, answered: item.answered };
       }
     });
 
     return weakest;
   }
 
-  function buildSession(settings) {
+  function buildStudySession(settings) {
     var all = normalizeQuestions();
     var filtered = all;
 
@@ -310,8 +287,32 @@
     var selected = filtered.slice(0, count);
 
     return {
+      mode: 'study',
       settings: settings,
       questions: selected,
+      currentIndex: 0,
+      score: 0,
+      answers: [],
+      startedAt: Date.now()
+    };
+  }
+
+  function buildMockSession(patternName, theme) {
+    if (!window.MOCK_EXAM || !window.MOCK_EXAM.getPatternQuestions) return null;
+
+    var questions = window.MOCK_EXAM.getPatternQuestions(patternName);
+    var meta = window.MOCK_EXAM.getPatternMeta(patternName);
+
+    return {
+      mode: 'mock',
+      settings: {
+        mode: 'mock',
+        mockPattern: patternName,
+        mockDisplayName: meta.displayName,
+        mockYear: meta.selectedYear,
+        theme: theme || getSavedTheme()
+      },
+      questions: questions,
       currentIndex: 0,
       score: 0,
       answers: [],
@@ -376,7 +377,7 @@
     if (cumulativeWeakCategoryValue) cumulativeWeakCategoryValue.textContent = weakest ? categoryLabel(weakest.category) : '--';
   }
 
-  function startQuiz() {
+  function startStudyQuiz() {
     var themeSelect = document.getElementById('themeSelect');
     var modeSelect = document.getElementById('modeSelect');
     var questionCount = document.getElementById('questionCount');
@@ -393,7 +394,7 @@
 
     applyTheme(settings.theme);
 
-    var session = buildSession(settings);
+    var session = buildStudySession(settings);
 
     if (settings.mode === 'wrongOnly' && !session.questions.length) {
       alert('まだ復習用の問題がありません。通常モードで間違えた問題を作ってから使ってください。');
@@ -414,6 +415,52 @@
     location.href = 'quiz.html';
   }
 
+  function startMockExam() {
+    var themeSelect = document.getElementById('themeSelect');
+    var mockPatternSelect = document.getElementById('mockPatternSelect');
+    var patternName = mockPatternSelect ? mockPatternSelect.value : 'pattern1';
+    var theme = themeSelect ? themeSelect.value : getSavedTheme();
+
+    applyTheme(theme);
+
+    if (!window.MOCK_EXAM) {
+      alert('模擬試験データを読み込めませんでした。');
+      return;
+    }
+
+    var ok = window.confirm(window.MOCK_EXAM.getStartConfirmMessage(patternName));
+    if (!ok) return;
+
+    var session = buildMockSession(patternName, theme);
+    if (!session || !session.questions || !session.questions.length) {
+      alert('模擬試験の問題を読み込めませんでした。');
+      return;
+    }
+
+    saveQuizSession(session);
+    location.href = 'quiz.html';
+  }
+
+  function handleInstallApp() {
+    var ua = navigator.userAgent || '';
+    var isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then(function () {
+        deferredInstallPrompt = null;
+      });
+      return;
+    }
+
+    if (isIOS) {
+      alert('iPhone / iPad では、ブラウザの共有ボタンから「ホーム画面に追加」を選んでください。');
+      return;
+    }
+
+    alert('このブラウザでは自動追加を表示できない場合があります。ブラウザのメニューから「ホーム画面に追加」を選んでください。');
+  }
+
   function initTopPage() {
     var startForm = document.getElementById('startForm');
     if (!startForm) return;
@@ -421,6 +468,9 @@
     var themeSelect = document.getElementById('themeSelect');
     var startButton = startForm.querySelector('button[type="submit"]');
     var resetStatsButton = document.getElementById('resetStatsButton');
+    var mockStartButton = document.getElementById('mockStartButton');
+    var installAppButton = document.getElementById('installAppButton');
+    var mockYearDisplay = document.getElementById('mockYearDisplay');
 
     var savedTheme = getSavedTheme();
     applyTheme(savedTheme);
@@ -432,17 +482,33 @@
       });
     }
 
+    if (mockYearDisplay && window.MOCK_EXAM_CONFIG) {
+      mockYearDisplay.value = String(window.MOCK_EXAM_CONFIG.selectedYear);
+    }
+
     renderCumulativeStats();
 
     startForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      startQuiz();
+      startStudyQuiz();
     });
 
     if (startButton) {
       startButton.addEventListener('click', function (e) {
         e.preventDefault();
-        startQuiz();
+        startStudyQuiz();
+      });
+    }
+
+    if (mockStartButton) {
+      mockStartButton.addEventListener('click', function () {
+        startMockExam();
+      });
+    }
+
+    if (installAppButton) {
+      installAppButton.addEventListener('click', function () {
+        handleInstallApp();
       });
     }
 
@@ -466,12 +532,9 @@
       return;
     }
 
-    var theme =
-      session &&
-      session.settings &&
-      session.settings.theme
-        ? session.settings.theme
-        : getSavedTheme();
+    var theme = session && session.settings && session.settings.theme
+      ? session.settings.theme
+      : getSavedTheme();
 
     applyTheme(theme);
 
@@ -487,10 +550,16 @@
     var answerStatus = document.getElementById('answerStatus');
     var explanationBox = document.getElementById('explanationBox');
     var nextButton = document.getElementById('nextButton');
+    var backToTitleLink = document.getElementById('backToTitleLink');
 
     if (!optionsArea || !questionText || !nextButton) return;
 
+    var isMock = session.mode === 'mock' || (session.settings && session.settings.mode === 'mock');
     var answered = false;
+
+    if (isMock && backToTitleLink) {
+      backToTitleLink.style.display = 'none';
+    }
 
     function renderQuestion() {
       var current = session.questions[session.currentIndex];
@@ -504,7 +573,11 @@
 
       if (modeBadge) modeBadge.textContent = modeLabel(session.settings.mode);
 
-      if (session.settings.mode === 'weakCategory' && session.settings.weakCategory) {
+      if (isMock) {
+        if (categoryBadge) {
+          categoryBadge.textContent = '模擬試験: ' + (session.settings.mockDisplayName || 'パターン');
+        }
+      } else if (session.settings.mode === 'weakCategory' && session.settings.weakCategory) {
         if (categoryBadge) categoryBadge.textContent = '分野: ' + categoryLabel(session.settings.weakCategory);
       } else {
         if (categoryBadge) categoryBadge.textContent = '分野: ' + categoryLabel(session.settings.category);
@@ -551,24 +624,14 @@
             category: current.category
           });
 
-          if (isCorrect) {
-            session.score += 1;
-          }
+          if (isCorrect) session.score += 1;
 
           Array.from(optionsArea.querySelectorAll('.option-button')).forEach(function (btn, btnIndex) {
             btn.disabled = true;
 
-            if (btnIndex === current.answer) {
-              btn.classList.add('correct');
-            }
-
-            if (btnIndex === index && btnIndex !== current.answer) {
-              btn.classList.add('incorrect');
-            }
-
-            if (btnIndex === index) {
-              btn.classList.add('selected');
-            }
+            if (btnIndex === current.answer) btn.classList.add('correct');
+            if (btnIndex === index && btnIndex !== current.answer) btn.classList.add('incorrect');
+            if (btnIndex === index) btn.classList.add('selected');
           });
 
           if (feedbackArea) feedbackArea.classList.remove('hidden');
@@ -579,15 +642,19 @@
           }
 
           if (explanationBox) {
-            var correctText = current.options[current.answer] || '';
-            explanationBox.innerHTML =
-              '<div class="explanation-title">解説</div>' +
-              '<div class="explanation-answer">正解: ' +
-              escapeHtml(String.fromCharCode(65 + current.answer) + '. ' + correctText) +
-              '</div>' +
-              '<div class="explanation-body">' +
-              escapeHtml(current.explanation || '解説は未設定です。') +
-              '</div>';
+            if (isMock) {
+              explanationBox.innerHTML = '';
+            } else {
+              var correctText = current.options[current.answer] || '';
+              explanationBox.innerHTML =
+                '<div class="explanation-title">解説</div>' +
+                '<div class="explanation-answer">正解: ' +
+                escapeHtml(String.fromCharCode(65 + current.answer) + '. ' + correctText) +
+                '</div>' +
+                '<div class="explanation-body">' +
+                escapeHtml(current.explanation || '解説は未設定です。') +
+                '</div>';
+            }
           }
 
           saveQuizSession(session);
@@ -614,11 +681,17 @@
           total: session.questions.length,
           answers: session.answers,
           settings: session.settings,
+          mode: session.mode || 'study',
           finishedAt: Date.now()
         };
+
         saveQuizResult(result);
-        updateWrongQuestionHistory(session.answers);
-        updatePerformanceStats(session.answers);
+
+        if (!isMock) {
+          updateWrongQuestionHistory(session.answers);
+          updatePerformanceStats(session.answers);
+        }
+
         location.href = 'result.html';
         return;
       }
@@ -631,6 +704,58 @@
     renderQuestion();
   }
 
+  function buildMockReviewHtml(item, index) {
+    var selectedText = item.options[item.selectedIndex] || '';
+    var correctText = item.options[item.correctIndex] || '';
+
+    return '' +
+      '<article class="result-question-card">' +
+        '<div class="review-top">' +
+          '<div class="review-number">第' + (index + 1) + '問</div>' +
+          '<div class="review-badge ' + (item.isCorrect ? 'review-badge-correct' : 'review-badge-incorrect') + '">' +
+            (item.isCorrect ? '正解' : '不正解') +
+          '</div>' +
+        '</div>' +
+        '<div class="review-question">' + escapeHtml(item.question) + '</div>' +
+        '<div class="review-answer-block">' +
+          '<div class="review-line"><span class="review-label">あなたの解答</span><span class="review-user ' + (item.isCorrect ? 'text-correct' : 'text-incorrect') + '">' +
+            escapeHtml(String.fromCharCode(65 + item.selectedIndex) + '. ' + selectedText) +
+          '</span></div>' +
+          '<div class="review-line"><span class="review-label">正解</span><span class="review-correct text-correct">' +
+            escapeHtml(String.fromCharCode(65 + item.correctIndex) + '. ' + correctText) +
+          '</span></div>' +
+        '</div>' +
+      '</article>';
+  }
+
+  function buildStudyReviewHtml(item, index) {
+    var selectedText = item.options[item.selectedIndex] || '';
+    var correctText = item.options[item.correctIndex] || '';
+
+    return '' +
+      '<article class="result-question-card">' +
+        '<div class="review-top">' +
+          '<div class="review-number">第' + (index + 1) + '問</div>' +
+          '<div class="review-badge ' + (item.isCorrect ? 'review-badge-correct' : 'review-badge-incorrect') + '">' +
+            (item.isCorrect ? '正解' : '不正解') +
+          '</div>' +
+        '</div>' +
+        '<div class="review-question">' + escapeHtml(item.question) + '</div>' +
+        '<div class="review-answer-block">' +
+          '<div class="review-line"><span class="review-label">あなたの解答</span><span class="review-user ' + (item.isCorrect ? 'text-correct' : 'text-incorrect') + '">' +
+            escapeHtml(String.fromCharCode(65 + item.selectedIndex) + '. ' + selectedText) +
+          '</span></div>' +
+          '<div class="review-line"><span class="review-label">正解</span><span class="review-correct text-correct">' +
+            escapeHtml(String.fromCharCode(65 + item.correctIndex) + '. ' + correctText) +
+          '</span></div>' +
+        '</div>' +
+        '<div class="review-explanation">' +
+          '<div class="explanation-title">解説</div>' +
+          '<div class="explanation-body">' + escapeHtml(item.explanation || '解説は未設定です。') + '</div>' +
+        '</div>' +
+      '</article>';
+  }
+
   function initResultPage() {
     var resultArea = document.getElementById('resultArea');
     if (!resultArea) return;
@@ -641,12 +766,9 @@
       return;
     }
 
-    var theme =
-      result &&
-      result.settings &&
-      result.settings.theme
-        ? result.settings.theme
-        : getSavedTheme();
+    var theme = result && result.settings && result.settings.theme
+      ? result.settings.theme
+      : getSavedTheme();
 
     applyTheme(theme);
 
@@ -655,60 +777,67 @@
     var modeValue = document.getElementById('modeValue');
     var categoryValue = document.getElementById('categoryValue');
     var reviewList = document.getElementById('reviewList');
+    var resultLead = document.getElementById('resultLead');
+    var cumulativeStatsSection = document.getElementById('cumulativeStatsSection');
+    var printPdfButton = document.getElementById('printPdfButton');
 
     var total = Number(result.total) || result.answers.length || 0;
     var score = Number(result.score) || 0;
     var accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+    var isMock = result.mode === 'mock' || (result.settings && result.settings.mode === 'mock');
 
-    if (scoreValue) scoreValue.textContent = score + ' / ' + total;
+    if (scoreValue) {
+      if (isMock) {
+        scoreValue.innerHTML = score + ' / ' + total + '<br><span class="mock-point-value">' + accuracy + '点</span>';
+      } else {
+        scoreValue.textContent = score + ' / ' + total;
+      }
+    }
+
     if (accuracyValue) accuracyValue.textContent = accuracy + '%';
     if (modeValue) modeValue.textContent = modeLabel(result.settings && result.settings.mode);
 
-    if (result.settings && result.settings.mode === 'weakCategory' && result.settings.weakCategory) {
-      if (categoryValue) categoryValue.textContent = categoryLabel(result.settings.weakCategory);
+    if (isMock) {
+      if (categoryValue) categoryValue.textContent = result.settings.mockDisplayName || '模擬試験';
+      if (resultLead) resultLead.textContent = '模擬試験の結果です。解説は表示していません。';
+      if (cumulativeStatsSection) cumulativeStatsSection.style.display = 'none';
     } else {
-      if (categoryValue) categoryValue.textContent = categoryLabel(result.settings && result.settings.category);
+      if (result.settings && result.settings.mode === 'weakCategory' && result.settings.weakCategory) {
+        if (categoryValue) categoryValue.textContent = categoryLabel(result.settings.weakCategory);
+      } else {
+        if (categoryValue) categoryValue.textContent = categoryLabel(result.settings && result.settings.category);
+      }
+      renderCumulativeStats();
     }
 
-    renderCumulativeStats();
+    if (printPdfButton) {
+      printPdfButton.addEventListener('click', function () {
+        window.print();
+      });
+    }
 
     if (reviewList) {
       reviewList.innerHTML = '';
 
       result.answers.forEach(function (item, index) {
-        var review = document.createElement('article');
-        review.className = 'result-question-card';
+        var html = isMock
+          ? buildMockReviewHtml(item, index)
+          : buildStudyReviewHtml(item, index);
 
-        var selectedText = item.options[item.selectedIndex] || '';
-        var correctText = item.options[item.correctIndex] || '';
-
-        review.innerHTML =
-          '<div class="review-top">' +
-            '<div class="review-number">第' + (index + 1) + '問</div>' +
-            '<div class="review-badge ' + (item.isCorrect ? 'review-badge-correct' : 'review-badge-incorrect') + '">' +
-              (item.isCorrect ? '正解' : '不正解') +
-            '</div>' +
-          '</div>' +
-          '<div class="review-question">' + escapeHtml(item.question) + '</div>' +
-          '<div class="review-answer-block">' +
-            '<div class="review-line"><span class="review-label">あなたの解答</span><span class="review-user ' + (item.isCorrect ? 'text-correct' : 'text-incorrect') + '">' +
-              escapeHtml(String.fromCharCode(65 + item.selectedIndex) + '. ' + selectedText) +
-            '</span></div>' +
-            '<div class="review-line"><span class="review-label">正解</span><span class="review-correct text-correct">' +
-              escapeHtml(String.fromCharCode(65 + item.correctIndex) + '. ' + correctText) +
-            '</span></div>' +
-          '</div>' +
-          '<div class="review-explanation">' +
-            '<div class="explanation-title">解説</div>' +
-            '<div class="explanation-body">' + escapeHtml(item.explanation || '解説は未設定です。') + '</div>' +
-          '</div>';
-
-        reviewList.appendChild(review);
+        reviewList.insertAdjacentHTML('beforeend', html);
       });
     }
   }
 
+  function setupInstallPromptListener() {
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+    });
+  }
+
   function boot() {
+    setupInstallPromptListener();
     initTopPage();
     initQuizPage();
     initResultPage();

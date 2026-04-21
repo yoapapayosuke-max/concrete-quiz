@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>コンクリート技士試験対策</title>
-  <link rel="stylesheet" href="style.css?v=20260421-4" />
+  <link rel="stylesheet" href="style.css?v=20260421-5" />
   <meta name="theme-color" content="#2f6fb2" />
 </head>
 <body>
@@ -25,11 +25,17 @@
         <span class="badge">社内教育 / 自主学習対応</span>
         <h1 class="page-title">コンクリート技士試験対策</h1>
         <p class="hero-text">
-          分野別に問題を解きながら、試験対策と知識定着を進めるWebアプリです。
+          分野別学習と模擬試験の両方に対応したベータ版です。
         </p>
       </div>
 
+      <div class="button-row top-utility-row">
+        <button type="button" id="installAppButton" class="secondary-button">画面にホームに追加</button>
+      </div>
+
       <form id="startForm" class="settings-card form-stack" novalidate>
+        <h2 class="section-title">学習モード</h2>
+
         <div class="form-grid">
           <div class="form-group">
             <label for="modeSelect">出題モード</label>
@@ -108,10 +114,37 @@
           <button type="button" id="resetStatsButton" class="secondary-button">成績をリセット</button>
         </div>
       </form>
+
+      <section class="settings-card form-stack mock-section">
+        <h2 class="section-title">模擬試験</h2>
+        <p class="hero-text">
+          本試験対策用の40問固定です。開始後は問題画面からタイトルに戻れません。
+        </p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="mockPatternSelect">出題パターン</label>
+            <select id="mockPatternSelect">
+              <option value="pattern1">パターン1</option>
+              <option value="pattern2">パターン2</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="mockYearDisplay">年度設定</label>
+            <input id="mockYearDisplay" type="text" value="2025" readonly />
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button type="button" id="mockStartButton" class="primary-button">模擬試験を開始</button>
+        </div>
+      </section>
     </section>
   </main>
 
-  <script src="questions.js?v=20260421-4"></script>
-  <script src="app.js?v=20260421-4"></script>
+  <script src="questions.js?v=20260421-5"></script>
+  <script src="mock-exam.js?v=20260421-5"></script>
+  <script src="app.js?v=20260421-5"></script>
 </body>
 </html>

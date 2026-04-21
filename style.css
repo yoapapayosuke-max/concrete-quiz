@@ -723,3 +723,87 @@ body.theme-dark .text-incorrect {
     justify-content: center;
   }
 }
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.back-link-button {
+  white-space: nowrap;
+}
+
+.cumulative-card {
+  margin-top: 18px;
+}
+
+.compact-summary-grid {
+  margin-top: 12px;
+}
+
+.result-header {
+  margin-bottom: 18px;
+}
+
+.top-utility-row {
+  margin-bottom: 16px;
+}
+
+.mock-section {
+  margin-top: 18px;
+}
+
+.mock-point-value {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--primary);
+}
+
+.no-print {
+  display: inline-flex;
+}
+
+@media (max-width: 768px) {
+  .title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .back-link-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .page-container {
+    width: 100%;
+    padding: 0;
+  }
+
+  .result-card,
+  .summary-card,
+  .result-question-card,
+  .stat-box,
+  .review-line {
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
