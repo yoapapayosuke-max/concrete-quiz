@@ -6,8 +6,8 @@
   <title>コンクリート技士試験対策</title>
   <link rel="stylesheet" href="style.css?v=20260421-5" />
   <meta name="theme-color" content="#2f6fb2" />
-<link rel="manifest" href="manifest.webmanifest" />
-<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="manifest" href="/icon/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icon/icon-192.png" />
 </head>
 <body>
   <script>
@@ -151,7 +151,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js?v=20260421-6').catch(function (err) {
+      navigator.serviceWorker.register('/icon/sw.js').catch(function (err) {
         console.error('Service Worker registration failed:', err);
       });
     });
