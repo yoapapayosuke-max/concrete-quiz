@@ -34,7 +34,7 @@ function textWithLineBreaks(value) {
     .replace(/\\n/g, '\n')
     .replace(/\r\n|\r|\n/g, '<br>');
 }
-}
+
   function containsHtml(value) {
     return /<\/?[a-z][\s\S]*>/i.test(String(value || ''));
   }
