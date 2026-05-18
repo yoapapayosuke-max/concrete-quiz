@@ -29,7 +29,9 @@
       .replace(/'/g, '&#39;');
   }
 
-
+function textWithLineBreaks(value) {
+  return escapeHtml(value || '').replace(/\r?\n/g, '<br>');
+}
   function containsHtml(value) {
     return /<\/?[a-z][\s\S]*>/i.test(String(value || ''));
   }
@@ -155,28 +157,40 @@ function renderQuestionMeta(question) {
 }
 
   function renderExplanationBody(question) {
-    var html = '';
-    var correctText = question.options && question.options[question.answer]
-      ? question.options[question.answer]
-      : '';
+  var html = '';
 
-    html += '<div class="explanation-title">解説</div>';
-    html += '<div class="explanation-answer">正解: ' +
-      escapeHtml(String.fromCharCode(65 + question.answer) + '. ' + correctText) +
-    '</div>';
-
-    html += renderTextOrHtml(question.explanation || '解説は未設定です。', 'explanation-body');
-
-    if (question.explanationTable) {
-      html += renderDataTable(question.explanationTable, 'explanation-table');
-    }
-
-    if (question.explanationImage) {
-      html += renderImage(question.explanationImage, '解説画像', 'explanation-image');
-    }
-
-    return html;
+  var answerIndex = Number(question.answer);
+  if (!Number.isInteger(answerIndex)) {
+    answerIndex = Number(question.answerIndex);
   }
+  if (!Number.isInteger(answerIndex)) {
+    answerIndex = 0;
+  }
+
+  var correctText = question.options && question.options[answerIndex]
+    ? question.options[answerIndex]
+    : '';
+
+  html += '<div class="explanation-title">解説</div>';
+
+  html += '<div class="explanation-answer">正解: ' +
+    escapeHtml(String.fromCharCode(65 + answerIndex) + '. ' + correctText) +
+  '</div>';
+
+  html += '<div class="explanation-body">' +
+    textWithLineBreaks(question.explanation || '解説は未設定です。') +
+  '</div>';
+
+  if (question.explanationTable) {
+    html += renderDataTable(question.explanationTable, 'explanation-table');
+  }
+
+  if (question.explanationImage) {
+    html += renderImage(question.explanationImage, '解説画像', 'explanation-image');
+  }
+
+  return html;
+}
 
   function renderReviewQuestionBody(item) {
   var html = '';
@@ -204,25 +218,25 @@ function renderQuestionMeta(question) {
 
   return html;
 }
+function renderReviewExplanationBody(item) {
+  var html = '';
 
-  function renderReviewExplanationBody(item) {
-    var html = '';
+  html += '<div class="explanation-title">解説</div>';
 
-    html += '<div class="explanation-title">解説</div>';
-    html += renderTextOrHtml(item.explanation || '解説は未設定です。', 'explanation-body');
+  html += '<div class="explanation-body">' +
+    textWithLineBreaks(item.explanation || '解説は未設定です。') +
+  '</div>';
 
-    if (item.explanationTable) {
-      html += renderDataTable(item.explanationTable, 'explanation-table');
-    }
-
-    if (item.explanationImage) {
-      html += renderImage(item.explanationImage, '解説画像', 'explanation-image');
-    }
-
-    return html;
+  if (item.explanationTable) {
+    html += renderDataTable(item.explanationTable, 'explanation-table');
   }
 
-  function shuffleArray(array) {
+  if (item.explanationImage) {
+    html += renderImage(item.explanationImage, '解説画像', 'explanation-image');
+  }
+
+  return html;
+}  function shuffleArray(array) {
     var copy = array.slice();
     for (var i = copy.length - 1; i > 0; i--) {
       var j = Math.floor(Math.random() * (i + 1));
