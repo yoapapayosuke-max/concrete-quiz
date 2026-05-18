@@ -4364,42 +4364,42 @@ window.QUESTIONS = [
         <tbody>
           <tr>
             <td>A</td>
-            <td>3.03</td>
-            <td>3880</td>
-            <td>22.4</td>
-            <td>36.2</td>
-            <td>62.8</td>
+            <td>3.22</td>
+            <td>3700</td>
             <td>-</td>
-            <td>-</td>
+            <td>11.9</td>
+            <td>16.7</td>
+            <td>56.0</td>
+            <td>82.3</td>
           </tr>
           <tr>
             <td>B</td>
-            <td>3.22</td>
-            <td>3280</td>
-            <td>20.4</td>
-            <td>30.1</td>
-            <td>59.6</td>
+            <td>3.03</td>
+            <td>3390</td>
             <td>-</td>
+            <td>22.4</td>
+            <td>36.6</td>
+            <td>62.6</td>
             <td>-</td>
           </tr>
           <tr>
             <td>C</td>
             <td>3.21</td>
-            <td>3440</td>
-            <td>21.6</td>
-            <td>55.3</td>
-            <td>81.7</td>
+            <td>3360</td>
             <td>-</td>
+            <td>19.9</td>
+            <td>28.5</td>
+            <td>57.8</td>
             <td>-</td>
           </tr>
           <tr>
             <td>D</td>
-            <td>3.14</td>
-            <td>4630</td>
-            <td>26.5</td>
-            <td>46.6</td>
-            <td>57.3</td>
-            <td>66.6</td>
+            <td>3.12</td>
+            <td>4620</td>
+            <td>28.3</td>
+            <td>47.3</td>
+            <td>57.8</td>
+            <td>68.0</td>
             <td>-</td>
           </tr>
         </tbody>
