@@ -36,7 +36,10 @@ explanationImage: "assets/explanations/2020-a-001-exp.png",
     ],
     answerIndex: 2,
     explanation: "途中。",
-    originalYear: 2025,
+explanationImage: "assets/explanations/2020-a-002-1-exp.png",
+    explanation: "途中。"
+explanationImage: "assets/explanations/2020-a-002-2-exp.png",
+    originalYear: 2020,
     originalQuestionNo: null,
     tags: ["細骨材", "表面水率", "品質管理"],
     excluded: false
