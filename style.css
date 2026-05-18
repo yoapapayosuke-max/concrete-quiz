@@ -1013,3 +1013,46 @@ body.theme-dark .question-table td,
 body.theme-dark .explanation-table td {
   color: #111827;
 }
+/* ================================
+   問題グラフ・画像表示 強化
+================================ */
+.question-media {
+  margin: 14px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.question-figure {
+  margin: 0;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.question-figure .question-image,
+.question-figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 10px;
+}
+
+.question-figure figcaption {
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+body.theme-dark .question-figure {
+  background: #111827;
+  border-color: #334155;
+}
+
+body.theme-dark .question-figure figcaption {
+  color: #cbd5e1;
+}
