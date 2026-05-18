@@ -1014,45 +1014,116 @@ body.theme-dark .explanation-table td {
   color: #111827;
 }
 /* ================================
-   問題グラフ・画像表示 強化
+   HTML入り問題文・表の表示修正
+   例: stem に <p> や <table> が入っている問題用
 ================================ */
-.question-media {
-  margin: 14px 0 0;
-  display: grid;
-  gap: 12px;
+.question-stem-html,
+.review-question-html,
+.explanation-body-html {
+  white-space: normal;
 }
 
-.question-figure {
-  margin: 0;
-  padding: 10px;
-  border-radius: 14px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+.question-stem-html p,
+.review-question-html p,
+.explanation-body-html p {
+  margin: 0 0 12px;
+}
+
+.question-stem-html .question-table-wrap,
+.review-question-html .question-table-wrap,
+.explanation-body-html .explanation-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 14px 0 4px;
+}
+
+.question-stem-html table,
+.review-question-html table,
+.explanation-body-html table,
+.question-table,
+.explanation-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 700;
+  background: #ffffff;
+  color: #111827;
+}
+
+.question-stem-html th,
+.question-stem-html td,
+.review-question-html th,
+.review-question-html td,
+.explanation-body-html th,
+.explanation-body-html td,
+.question-table th,
+.question-table td,
+.explanation-table th,
+.explanation-table td {
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
   text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
-.question-figure .question-image,
-.question-figure img {
+.question-stem-html th,
+.review-question-html th,
+.explanation-body-html th,
+.question-table th,
+.explanation-table th {
+  background: #e8f1fb;
+  color: #12314f;
+  font-weight: 900;
+}
+
+body.theme-dark .question-stem-html table,
+body.theme-dark .review-question-html table,
+body.theme-dark .explanation-body-html table,
+body.theme-dark .question-table,
+body.theme-dark .explanation-table {
+  background: #ffffff;
+  color: #111827;
+}
+
+body.theme-dark .question-stem-html th,
+body.theme-dark .review-question-html th,
+body.theme-dark .explanation-body-html th,
+body.theme-dark .question-table th,
+body.theme-dark .explanation-table th {
+  background: #dbeafe;
+  color: #111827;
+}
+
+.question-media-list,
+.explanation-media-list {
+  margin-top: 14px;
+}
+
+.question-figure,
+.explanation-figure {
+  margin: 14px 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.question-figure img,
+.explanation-figure img {
   display: block;
   max-width: 100%;
   height: auto;
   margin: 0 auto;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
-.question-figure figcaption {
+.question-figure figcaption,
+.explanation-figure figcaption {
   margin-top: 8px;
+  text-align: center;
   color: var(--text-soft);
-  font-size: 0.86rem;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-body.theme-dark .question-figure {
-  background: #111827;
-  border-color: #334155;
-}
-
-body.theme-dark .question-figure figcaption {
-  color: #cbd5e1;
+  font-size: 0.85rem;
 }

@@ -29,6 +29,54 @@
       .replace(/'/g, '&#39;');
   }
 
+
+  function containsHtml(value) {
+    return /<\/?[a-z][\s\S]*>/i.test(String(value || ''));
+  }
+
+  function sanitizeTrustedHtml(value) {
+    return String(value || '')
+      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '')
+      .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, '')
+      .replace(/<object[\s\S]*?>[\s\S]*?<\/object>/gi, '')
+      .replace(/<embed[\s\S]*?>[\s\S]*?<\/embed>/gi, '')
+      .replace(/<link[\s\S]*?>/gi, '')
+      .replace(/<meta[\s\S]*?>/gi, '')
+      .replace(/\s+on\w+\s*=\s*"[^"]*"/gi, '')
+      .replace(/\s+on\w+\s*=\s*'[^']*'/gi, '')
+      .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, '')
+      .replace(/javascript\s*:/gi, '');
+  }
+
+  function renderTextOrHtml(value, className) {
+    var raw = String(value || '');
+    if (containsHtml(raw)) {
+      return '<div class="' + className + ' ' + className + '-html">' + sanitizeTrustedHtml(raw) + '</div>';
+    }
+    return '<div class="' + className + '">' + escapeHtml(raw) + '</div>';
+  }
+
+  function renderMediaList(mediaList, className) {
+    if (!Array.isArray(mediaList) || !mediaList.length) return '';
+
+    return '<div class="' + className + '-media-list">' +
+      mediaList.map(function (item) {
+        if (!item || !item.src) return '';
+
+        var caption = item.caption
+          ? '<figcaption>' + escapeHtml(item.caption) + '</figcaption>'
+          : '';
+
+        return '' +
+          '<figure class="' + className + '-figure">' +
+            '<img src="' + escapeHtml(item.src) + '" alt="' + escapeHtml(item.alt || '問題画像') + '" loading="lazy">' +
+            caption +
+          '</figure>';
+      }).join('') +
+    '</div>';
+  }
+
   function renderDataTable(tableData, className) {
     if (!tableData || !Array.isArray(tableData.rows)) return '';
 
@@ -70,47 +118,12 @@
         '<img src="' + escapeHtml(imagePath) + '" alt="' + escapeHtml(altText) + '" class="' + className + '">' +
       '</div>';
   }
-
-  function renderQuestionMedia(question) {
-    var html = '';
-    var mediaList = [];
-
-    if (Array.isArray(question.media)) {
-      mediaList = mediaList.concat(question.media);
-    }
-
-    if (Array.isArray(question.stemImages)) {
-      mediaList = mediaList.concat(question.stemImages);
-    }
-
-    if (question.stemImage) {
-      mediaList.push({
-        type: 'image',
-        src: question.stemImage,
-        alt: '問題画像',
-        caption: ''
-      });
-    }
-
-    mediaList.forEach(function (item) {
-      if (!item || !item.src) return;
-
-      html += '' +
-        '<figure class="question-figure">' +
-          '<img src="' + escapeHtml(item.src) + '" alt="' + escapeHtml(item.alt || '問題画像') + '" class="question-image" loading="lazy">' +
-          (item.caption ? '<figcaption>' + escapeHtml(item.caption) + '</figcaption>' : '') +
-        '</figure>';
-    });
-
-    if (!html) return '';
-    return '<div class="question-media">' + html + '</div>';
-  }
 function renderQuestionMeta(question) {
-  var id = question.id || '--';
-  var year = question.year || question.originalYear || '--';
+  var id = question.id || question.questionId || '--';
+  var year = question.year || '--';
   var category = question.category || '--';
   var categoryName = question.categoryName || categoryLabel(category);
-  var originalQuestionNo = question.originalQuestionNo || '--';
+  var originalQuestionNo = question.originalQuestionNo ?? '--';
   var sourceKind = question.sourceKind || '--';
 
   return '' +
@@ -126,14 +139,17 @@ function renderQuestionMeta(question) {
   var html = '';
 
   html += renderQuestionMeta(question);
-
-  html += '<div class="question-stem">' + escapeHtml(question.stem || question.question || '') + '</div>';
+  html += renderTextOrHtml(question.stem || question.question || '', 'question-stem');
 
   if (question.stemTable) {
     html += renderDataTable(question.stemTable, 'question-table');
   }
 
-  html += renderQuestionMedia(question);
+  if (question.stemImage) {
+    html += renderImage(question.stemImage, '問題画像', 'question-image');
+  }
+
+  html += renderMediaList(question.media || question.stemImages || [], 'question');
 
   return html;
 }
@@ -149,9 +165,7 @@ function renderQuestionMeta(question) {
       escapeHtml(String.fromCharCode(65 + question.answer) + '. ' + correctText) +
     '</div>';
 
-    html += '<div class="explanation-body">' +
-      escapeHtml(question.explanation || '解説は未設定です。') +
-    '</div>';
+    html += renderTextOrHtml(question.explanation || '解説は未設定です。', 'explanation-body');
 
     if (question.explanationTable) {
       html += renderDataTable(question.explanationTable, 'explanation-table');
@@ -171,16 +185,22 @@ function renderQuestionMeta(question) {
     id: item.questionId,
     year: item.year,
     category: item.category,
-    categoryName: item.categoryName
+    categoryName: item.categoryName,
+    originalQuestionNo: item.originalQuestionNo,
+    sourceKind: item.sourceKind
   });
 
-  html += '<div class="review-question">' + escapeHtml(item.stem || item.question || '') + '</div>';
+  html += renderTextOrHtml(item.stem || item.question || '', 'review-question');
 
   if (item.stemTable) {
     html += renderDataTable(item.stemTable, 'question-table');
   }
 
-  html += renderQuestionMedia(item);
+  if (item.stemImage) {
+    html += renderImage(item.stemImage, '問題画像', 'question-image');
+  }
+
+  html += renderMediaList(item.media || item.stemImages || [], 'question');
 
   return html;
 }
@@ -189,9 +209,7 @@ function renderQuestionMeta(question) {
     var html = '';
 
     html += '<div class="explanation-title">解説</div>';
-    html += '<div class="explanation-body">' +
-      escapeHtml(item.explanation || '解説は未設定です。') +
-    '</div>';
+    html += renderTextOrHtml(item.explanation || '解説は未設定です。', 'explanation-body');
 
     if (item.explanationTable) {
       html += renderDataTable(item.explanationTable, 'explanation-table');
@@ -267,7 +285,7 @@ function renderQuestionMeta(question) {
       categoryName: q.categoryName || '',
       year: q.year || null,
       originalYear: q.originalYear || q.year || null,
-      originalQuestionNo: q.originalQuestionNo || null,
+      originalQuestionNo: q.originalQuestionNo ?? null,
       sourceKind: q.sourceKind || '',
 
       question: q.question || q.stem || '問題文が設定されていません。',
@@ -275,8 +293,8 @@ function renderQuestionMeta(question) {
 
       stemTable: q.stemTable || q.questionTable || null,
       stemImage: q.stemImage || q.questionImage || '',
-      stemImages: Array.isArray(q.stemImages) ? q.stemImages.slice() : [],
-      media: Array.isArray(q.media) ? q.media.slice() : [],
+      stemImages: q.stemImages || q.questionImages || null,
+      media: q.media || q.stemImages || q.questionImages || null,
 
       options: options,
       answer: answerIndex,
@@ -312,6 +330,35 @@ function renderQuestionMeta(question) {
       h: 'h 構造・力学・法令・その他'
     };
     return map[value] || value || 'すべて';
+  }
+
+  function setupYearSelect() {
+    var yearSelect = document.getElementById('yearSelect');
+    if (!yearSelect) return;
+
+    var years = normalizeQuestions()
+      .map(function (q) { return q.year; })
+      .filter(function (year) { return year !== undefined && year !== null && year !== ''; });
+
+    years = Array.from(new Set(years.map(function (year) { return String(year); })))
+      .sort(function (a, b) { return Number(b) - Number(a); });
+
+    var currentValue = yearSelect.value || 'all';
+    try {
+      var saved = JSON.parse(localStorage.getItem('concreteQuizSettings') || '{}');
+      if (saved.year) currentValue = saved.year;
+    } catch (e) {}
+
+    yearSelect.innerHTML = '<option value="all">すべて</option>';
+
+    years.forEach(function (year) {
+      var option = document.createElement('option');
+      option.value = String(year);
+      option.textContent = String(year) + '年度';
+      yearSelect.appendChild(option);
+    });
+
+    yearSelect.value = years.indexOf(String(currentValue)) >= 0 ? String(currentValue) : 'all';
   }
 
   function modeLabel(value) {
@@ -595,42 +642,12 @@ function renderQuestionMeta(question) {
     if (cumulativeWeakCategoryValue) cumulativeWeakCategoryValue.textContent = weakest ? categoryLabel(weakest.category) : '--';
   }
 
-  function setupYearSelect() {
-    var yearSelect = document.getElementById('yearSelect');
-    if (!yearSelect) return;
-
-    var questions = normalizeQuestions();
-    var years = questions
-      .map(function (q) { return q.year; })
-      .filter(function (year) { return year !== undefined && year !== null && year !== ''; });
-
-    years = Array.from(new Set(years.map(function (year) { return String(year); })))
-      .sort(function (a, b) { return Number(b) - Number(a); });
-
-    var currentValue = yearSelect.value || 'all';
-    yearSelect.innerHTML = '<option value="all">すべて</option>';
-
-    years.forEach(function (year) {
-      var option = document.createElement('option');
-      option.value = String(year);
-      option.textContent = String(year) + '年度';
-      yearSelect.appendChild(option);
-    });
-
-    try {
-      var saved = JSON.parse(localStorage.getItem('concreteQuizSettings') || '{}');
-      if (saved.year) currentValue = saved.year;
-    } catch (e) {}
-
-    yearSelect.value = years.indexOf(String(currentValue)) >= 0 ? String(currentValue) : 'all';
-  }
-
   function startStudyQuiz() {
     var themeSelect = document.getElementById('themeSelect');
     var modeSelect = document.getElementById('modeSelect');
     var questionCount = document.getElementById('questionCount');
-    var yearSelect = document.getElementById('yearSelect');
     var categorySelect = document.getElementById('categorySelect');
+    var yearSelect = document.getElementById('yearSelect');
 
     var savedTheme = getSavedTheme();
 
@@ -740,6 +757,7 @@ function renderQuestionMeta(question) {
 
     var savedTheme = getSavedTheme();
     applyTheme(savedTheme);
+    setupYearSelect();
 
     if (themeSelect) {
       themeSelect.value = savedTheme;
@@ -747,21 +765,6 @@ function renderQuestionMeta(question) {
         applyTheme(themeSelect.value);
       });
     }
-
-    setupYearSelect();
-
-    try {
-      var savedSettings = JSON.parse(localStorage.getItem('concreteQuizSettings') || '{}');
-      var modeSelect = document.getElementById('modeSelect');
-      var questionCount = document.getElementById('questionCount');
-      var categorySelect = document.getElementById('categorySelect');
-      var yearSelect = document.getElementById('yearSelect');
-
-      if (modeSelect && savedSettings.mode) modeSelect.value = savedSettings.mode;
-      if (questionCount && savedSettings.count) questionCount.value = String(savedSettings.count);
-      if (categorySelect && savedSettings.category) categorySelect.value = savedSettings.category;
-      if (yearSelect && savedSettings.year) yearSelect.value = savedSettings.year;
-    } catch (e) {}
 
     if (mockYearDisplay && window.MOCK_EXAM_CONFIG) {
       mockYearDisplay.value = String(window.MOCK_EXAM_CONFIG.selectedYear);
@@ -902,11 +905,6 @@ function renderQuestionMeta(question) {
   stem: current.stem,
   stemTable: current.stemTable,
   stemImage: current.stemImage,
-  stemImages: current.stemImages,
-  media: current.media,
-  originalYear: current.originalYear,
-  originalQuestionNo: current.originalQuestionNo,
-  sourceKind: current.sourceKind,
 
   year: current.year,
   category: current.category,
