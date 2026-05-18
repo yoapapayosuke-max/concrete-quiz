@@ -30,7 +30,10 @@
   }
 
 function textWithLineBreaks(value) {
-  return escapeHtml(value || '').replace(/\r?\n/g, '<br>');
+  return escapeHtml(value || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n|\r|\n/g, '<br>');
+}
 }
   function containsHtml(value) {
     return /<\/?[a-z][\s\S]*>/i.test(String(value || ''));
@@ -113,13 +116,22 @@ function textWithLineBreaks(value) {
   }
 
   function renderImage(imagePath, altText, className) {
-    if (!imagePath) return '';
+  if (!imagePath) return '';
 
-    return '' +
-      '<div class="' + className + '-wrap">' +
-        '<img src="' + escapeHtml(imagePath) + '" alt="' + escapeHtml(altText) + '" class="' + className + '">' +
-      '</div>';
-  }
+  var safePath = escapeHtml(imagePath);
+  var safeAlt = escapeHtml(altText || '画像');
+
+  return '' +
+    '<div class="' + className + '-wrap image-frame">' +
+      '<img ' +
+        'src="' + safePath + '" ' +
+        'alt="' + safeAlt + '" ' +
+        'class="' + className + '" ' +
+        'loading="lazy" ' +
+        'onerror="this.style.display=&quot;none&quot;; this.parentElement.classList.add(&quot;image-load-error&quot;); this.parentElement.insertAdjacentHTML(&quot;beforeend&quot;, &quot;<div class=\\&quot;image-error-box\\&quot;>画像を読み込めませんでした<br><small>' + safePath + '</small></div>&quot;);"' +
+      '>' +
+    '</div>';
+}
 function renderQuestionMeta(question) {
   var id = question.id || question.questionId || '--';
   var year = question.year || '--';
