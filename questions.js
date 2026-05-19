@@ -63,8 +63,14 @@ explanationImage: "assets/explanations/2020-a-001-exp.png",
   caption: "図2：高炉スラグ細骨材のポイント"
 },
 {
-  text: `したがって、正解は3です。`
-}  ],
+  text: `（4）JIS A 5021（コンクリート用再生骨材H）では、「5 品質 5.2物理的性質」において、再生骨材Hの物理的性質を、以下の表に示す通り、絶乾密度、吸水率、微粒分量が定められているので、記述は適当である。`
+} 
+{
+  image: "assets/explanations/2020-a-002-3-exp.png",
+  alt: "再生骨材Hの物理的性質の説明画像",
+  caption: "図3:再生骨材Hの物理的性質（JISA5021）"
+},
+ ],
 
   originalYear: 2020,
   originalQuestionNo: null,
