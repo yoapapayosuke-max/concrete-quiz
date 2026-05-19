@@ -69,7 +69,8 @@ explanationImage: "assets/explanations/2020-a-001-exp.png",
   image: "assets/explanations/2020-a-002-3-exp.png",
   alt: "再生骨材Hの物理的性質の説明画像",
   caption: "図3:再生骨材Hの物理的性質（JISA5021）"
- ],
+}
+],
 
   originalYear: 2020,
   originalQuestionNo: null,
