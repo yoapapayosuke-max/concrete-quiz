@@ -52,6 +52,7 @@ explanationImage: "assets/explanations/2020-a-001-exp.png",
     },
 {
       text: `（3）JIS A 5011-1（コンクリート用スラグ骨材-第一部：高炉スラグ骨材）では、「4種類、区分及び呼び方4.1種類」において、高炉スラグ骨材を以下の表の通り区分している。徐冷ではなく急冷。したがって、記述は不適当である。
+},
     {
       image: "assets/explanations/2020-a-002-2-exp.png",
       alt: "高炉スラグ骨材の種類に関する説明画像",
