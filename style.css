@@ -1208,3 +1208,24 @@ body.theme-dark .image-error-box {
   color: #ffd9df;
   border-color: #be5261;
 }
+.explanation-blocks {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.explanation-block-text {
+  padding-top: 4px;
+}
+
+.explanation-image-caption {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+body.theme-dark .explanation-image-caption {
+  color: #cbd5e1;
+}

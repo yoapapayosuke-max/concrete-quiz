@@ -167,7 +167,39 @@ function renderQuestionMeta(question) {
 
   return html;
 }
+function renderExplanationBlocks(blocks) {
+  if (!Array.isArray(blocks) || !blocks.length) return '';
 
+  var html = '<div class="explanation-blocks">';
+
+  blocks.forEach(function (block) {
+    if (!block) return;
+
+    if (block.text) {
+      html += '<div class="explanation-body explanation-block-text">' +
+        textWithLineBreaks(block.text) +
+      '</div>';
+    }
+
+    if (block.image) {
+      html += renderImage(block.image, block.alt || '解説画像', 'explanation-image');
+
+      if (block.caption) {
+        html += '<div class="explanation-image-caption">' +
+          escapeHtml(block.caption) +
+        '</div>';
+      }
+    }
+
+    if (block.table) {
+      html += renderDataTable(block.table, 'explanation-table');
+    }
+  });
+
+  html += '</div>';
+
+  return html;
+}
   function renderExplanationBody(question) {
   var html = '';
 
@@ -189,9 +221,15 @@ function renderQuestionMeta(question) {
     escapeHtml(String.fromCharCode(65 + answerIndex) + '. ' + correctText) +
   '</div>';
 
-  html += '<div class="explanation-body">' +
-    textWithLineBreaks(question.explanation || '解説は未設定です。') +
-  '</div>';
+  if (question.explanation) {
+    html += '<div class="explanation-body">' +
+      textWithLineBreaks(question.explanation) +
+    '</div>';
+  }
+
+  if (question.explanationBlocks) {
+    html += renderExplanationBlocks(question.explanationBlocks);
+  }
 
   if (question.explanationTable) {
     html += renderDataTable(question.explanationTable, 'explanation-table');
@@ -235,9 +273,15 @@ function renderReviewExplanationBody(item) {
 
   html += '<div class="explanation-title">解説</div>';
 
-  html += '<div class="explanation-body">' +
-    textWithLineBreaks(item.explanation || '解説は未設定です。') +
-  '</div>';
+  if (item.explanation) {
+    html += '<div class="explanation-body">' +
+      textWithLineBreaks(item.explanation) +
+    '</div>';
+  }
+
+  if (item.explanationBlocks) {
+    html += renderExplanationBlocks(item.explanationBlocks);
+  }
 
   if (item.explanationTable) {
     html += renderDataTable(item.explanationTable, 'explanation-table');
@@ -327,7 +371,8 @@ function renderReviewExplanationBody(item) {
       explanation: q.explanation || '',
 
       explanationTable: q.explanationTable || null,
-      explanationImage: q.explanationImage || ''
+explanationImage: q.explanationImage || '',
+explanationBlocks: q.explanationBlocks || null
     };
   }
 
@@ -940,9 +985,10 @@ function renderReviewExplanationBody(item) {
   selectedIndex: index,
   correctIndex: current.answer,
   explanation: current.explanation,
-  explanationTable: current.explanationTable,
-  explanationImage: current.explanationImage,
-  isCorrect: isCorrect
+explanationTable: current.explanationTable,
+explanationImage: current.explanationImage,
+explanationBlocks: current.explanationBlocks,
+isCorrect: isCorrect
 });
 
           if (isCorrect) session.score += 1;
